@@ -1,0 +1,15 @@
+[submodule "Common"]
+	path = Common
+	url = https://github.com/tambry/Common.git
+[submodule "Vulkan/Vulkan-LoaderAndValidationLayers"]
+	path = Vulkan/Vulkan-LoaderAndValidationLayers
+	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers.git
+[submodule "Vulkan/glslang"]
+	path = Vulkan/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui
+[submodule "glm"]
+	path = glm
+	url = https://github.com/g-truc/glm.git

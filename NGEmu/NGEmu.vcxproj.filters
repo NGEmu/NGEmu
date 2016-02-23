@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Emulator">
+      <UniqueIdentifier>{a9a40631-e5bc-48fc-9d56-ec4371a70b02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emulator\Debugger">
+      <UniqueIdentifier>{b211bdf7-feeb-474d-b074-e81a842245b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{41704791-8543-4e3a-9c14-4b4bc5184604}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emulator\CPU">
+      <UniqueIdentifier>{c73f81ab-f3ca-4395-9531-f3a588e4eaba}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="NGEmu.cpp">
+      <Filter>Emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Emulator</Filter>
+    </ClCompile>
+    <ClCompile Include="Debugger\Debugger.cpp">
+      <Filter>Emulator\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="Debugger\ImGuiVulkanRenderer.cpp">
+      <Filter>Emulator\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_draw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="Debugger\Debugger.h">
+      <Filter>Emulator\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="Debugger\ImGuiVulkanRenderer.h">
+      <Filter>Emulator\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imconfig.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imgui.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imgui_internal.h">
+      <Filter>ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="NGEmu.h">
+      <Filter>Emulator</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
