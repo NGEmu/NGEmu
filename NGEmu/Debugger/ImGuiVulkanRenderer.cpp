@@ -35,7 +35,7 @@
 //  ((          $$$$$$$$$$$#####       $$$$$$$$###"       "####$$$$$$$$$$ 
 //  ) \         $$$$$$$$$$$$####.     $$$$$$###"             "###$$$$$$$$$   s'
 // (   )        $$$$$$$$$$$$$####.   $$$$$###"                ####$$$$$$$$s$$'
-// )  ( (       $$"$$$$$$$$$$$#####.$$$$$###' -Tua Xiong     .###$$$$$$$$$$"
+// )  ( (       $$"$$$$$$$$$$$#####.$$$$$###'                .###$$$$$$$$$$"
 // (  )  )   _,$"   $$$$$$$$$$$$######.$$##'                .###$$$$$$$$$$
 // ) (  ( \.         "$$$$$$$$$$$$$#######,,,.          ..####$$$$$$$$$$$"
 //(   )$ )  )        ,$$$$$$$$$$$$$$$$$$####################$$$$$$$$$$$"        
@@ -57,7 +57,7 @@ u32 ImGuiVulkanRenderer::get_graphics_family(VkPhysicalDevice adapter, VkSurface
 	std::vector<VkQueueFamilyProperties> queues(family_queue_count);
 	vkGetPhysicalDeviceQueueFamilyProperties(adapter, &family_queue_count, queues.data());
 
-	for (u32 i = 0; i < queues.size(); ++i)
+	for (u32 i = 0; i < queues.size(); i++)
 	{
 		if (!(queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
 		{
@@ -163,21 +163,6 @@ ImGuiVulkanRenderer::~ImGuiVulkanRenderer()
 		destroy_debug_report(instance, debug_callback_function, nullptr);
 	}
 
-	if (font_texture.image_view)
-	{
-		vkDestroyImageView(device, font_texture.image_view, nullptr);
-	}
-
-	if (font_texture.image)
-	{
-		vkDestroyImage(device, font_texture.image, nullptr);
-	}
-
-	if (font_texture.device_memory)
-	{
-		vkFreeMemory(device, font_texture.device_memory, nullptr);
-	}
-
 	if (command_pool)
 	{
 		vkDestroyCommandPool(device, command_pool, nullptr);
@@ -224,7 +209,6 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	semaphore_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	VkSemaphore semaphore;
 
@@ -267,13 +251,10 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		return;
 	}
 
-	VkClearValue clear_value[2];
-	clear_value[0].color.float32[0] = 0.025f;
-	clear_value[0].color.float32[1] = 0.025f;
-	clear_value[0].color.float32[2] = 0.025f;
-	clear_value[0].depthStencil.stencil = 1;
-	clear_value[1].depthStencil.depth = 1.0f;
-	clear_value[1].depthStencil.stencil = 0;
+	VkClearValue clear_value;
+	clear_value.color.float32[0] = 0.025f;
+	clear_value.color.float32[1] = 0.025f;
+	clear_value.color.float32[2] = 0.025f;
 
 	VkRenderPassBeginInfo render_pass_begin_info = {};
 	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -283,8 +264,8 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 	render_pass_begin_info.renderArea.offset.y = 0;
 	render_pass_begin_info.renderArea.extent.width = renderer.width;
 	render_pass_begin_info.renderArea.extent.height = renderer.height;
-	render_pass_begin_info.clearValueCount = 2;
-	render_pass_begin_info.pClearValues = clear_value;
+	render_pass_begin_info.clearValueCount = 1;
+	render_pass_begin_info.pClearValues = &clear_value;
 
 	vkCmdBeginRenderPass(renderer.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -295,130 +276,142 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(renderer.command_buffer, 0, 1, &viewport);
 
-	VkRect2D scissor = {};
-	scissor.extent.width = 1100;
-	scissor.extent.height = 800;
-	scissor.offset.x = 0;
-	scissor.offset.y = 0;
-	vkCmdSetScissor(renderer.command_buffer, 0, 1, &scissor);
-
+	//bool restrict = false;
 	vkCmdBindDescriptorSets(renderer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline_layout, 0, 1, &renderer.descriptor_set, 0, nullptr);
+	//vkCmdPushConstants(renderer.command_buffer, renderer.pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(float) * 16, sizeof(s32), &restrict);
 	vkCmdBindPipeline(renderer.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline);
-
-	// Bind triangle vertices
-	u64 offsets = 0;
-	vkCmdBindVertexBuffers(renderer.command_buffer, 0, 1, &renderer.triangle_vertices.buffer, &offsets);
-
-	// Bind triangle indices
-	vkCmdBindIndexBuffer(renderer.command_buffer, renderer.triangle_indices.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-	// Draw the indexed triangle
-	vkCmdDrawIndexed(renderer.command_buffer, 3, 1, 0, 0, 1);
 
 	if (draw_data->CmdListsCount != 1)
 	{
-		log(DEBUG, "%d", draw_data->CmdListsCount);
+		log(DEBUG, "Ah dang. Report this to tambre. (%d)", draw_data->CmdListsCount);
 	}
 
-	//for (s32 i = 0; i < draw_data->CmdListsCount; i++)
-	//{
-	//	ImDrawList* draw_list = draw_data->CmdLists[i];
-	//	//u8* vtx_buffer = (u8*)&draw_list->VtxBuffer.front();
-	//	//u8* idx_buffer = (u8*)&draw_list->IdxBuffer.front();
-	//	
-	//	if (renderer.vertex_buffer && renderer.index_buffer)
-	//	{
-	//		vkDestroyBuffer(renderer.device, renderer.vertex_buffer, nullptr);
-	//		vkDestroyBuffer(renderer.device, renderer.index_buffer, nullptr);
-	//	}
+	std::vector<VkDeviceMemory> buffer_memory(draw_data->CmdListsCount);
+	std::vector<VkBuffer> vertex_buffer(draw_data->CmdListsCount);
+	std::vector<VkBuffer> index_buffer(draw_data->CmdListsCount);
 
-	//	// Create the index and vertex buffers
-	//	// Vertex buffer info
-	//	VkBufferCreateInfo vertex_buffer_info = {};
-	//	vertex_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	//	vertex_buffer_info.size = draw_list->VtxBuffer.size();
-	//	vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	for (s32 i = 0; i < draw_data->CmdListsCount; i++)
+	{
+		ImDrawList* draw_list = draw_data->CmdLists[i];
 
-	//	// Index buffer info
-	//	VkBufferCreateInfo index_buffer_info = {};
-	//	index_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	//	index_buffer_info.size = draw_list->IdxBuffer.size();
-	//	index_buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		VkBufferCreateInfo vertex_buffer_info = {};
+		vertex_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		vertex_buffer_info.size = draw_list->VtxBuffer.size() * sizeof(ImDrawVert);
+		vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
-	//	if ((result = vkCreateBuffer(renderer.device, &vertex_buffer_info, nullptr, &renderer.vertex_buffer)) != VK_SUCCESS)
-	//	{
-	//		log(ERROR, "Failed to create an index buffer for rendering. (%d)", result);
-	//		return;
-	//	}
+		VkBufferCreateInfo index_buffer_info = {};
+		index_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		index_buffer_info.size = draw_list->IdxBuffer.size() * sizeof(ImDrawIdx);
+		index_buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-	//	if ((result = vkCreateBuffer(renderer.device, &index_buffer_info, nullptr, &renderer.index_buffer)) != VK_SUCCESS)
-	//	{
-	//		log(ERROR, "Failed to create an index buffer for rendering. (%d)", result);
-	//		return;
-	//	}
+		if ((result = vkCreateBuffer(renderer.device, &vertex_buffer_info, nullptr, &vertex_buffer[i])) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to create a vertex buffer for rendering. (%d)", result);
+			return;
+		}
 
-	//	void *data;
-	//	VkDeviceMemory device_memory;
-	//	VkMemoryRequirements memory_requirements;
-	//	VkMemoryAllocateInfo memory_allocate_info = {};
-	//	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		if ((result = vkCreateBuffer(renderer.device, &index_buffer_info, nullptr, &index_buffer[i])) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to create a index buffer for rendering. (%d)", result);
+			return;
+		}
 
-	//	vkGetBufferMemoryRequirements(renderer.device, renderer.index_buffer, &memory_requirements);
+		VkMemoryRequirements vertex_memory_requirements;
+		VkMemoryRequirements index_memory_requirements;
+		vkGetBufferMemoryRequirements(renderer.device, vertex_buffer[i], &vertex_memory_requirements);
+		vkGetBufferMemoryRequirements(renderer.device, index_buffer[i], &index_memory_requirements);
 
-	//	memory_allocate_info.allocationSize = memory_requirements.size;
+		// Calculate the offset for being properly aligned
+		u64 index_offset = draw_list->VtxBuffer.size() * sizeof(ImDrawVert);
+		index_offset = index_offset + index_memory_requirements.alignment - (index_offset % index_memory_requirements.alignment);
 
-	//	if (!renderer.get_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocate_info.memoryTypeIndex))
-	//	{
-	//		log(ERROR, "Failed to get memory type for index buffer. (%d)", result);
-	//		return;
-	//	}
+		VkMemoryAllocateInfo memory_allocation_info = {};
+		memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		memory_allocation_info.allocationSize = vertex_memory_requirements.size + index_offset;
 
-	//	if ((result = vkAllocateMemory(renderer.device, &memory_allocate_info, nullptr, &device_memory)) != VK_SUCCESS)
-	//	{
-	//		log(ERROR, "Failed to allocate memory for the index buffer. (%d)", result);
-	//		return;
-	//	}
+		renderer.get_memory_type(vertex_memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocation_info.memoryTypeIndex);
 
-	//	if ((result = vkMapMemory(renderer.device, device_memory, 0, memory_allocate_info.allocationSize, 0, &data)) != VK_SUCCESS)
-	//	{
-	//		log(ERROR, "Failed to map memory for the index buffer. (%d)", result);
-	//		return;
-	//	}
+		if ((result = vkAllocateMemory(renderer.device, &memory_allocation_info, nullptr, &buffer_memory[i])) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to allocate memory for rendering. (%d)", result);
+			return;
+		}
 
-	//	memcpy(data, draw_list->IdxBuffer.begin(), draw_list->IdxBuffer.size());
+		void* data;
 
-	//	vkUnmapMemory(renderer.device, device_memory);
+		if ((result = vkMapMemory(renderer.device, buffer_memory[i], 0, memory_allocation_info.allocationSize, 0, &data)) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to map memory for vertex buffer. (%d)", result);
+			return;
+		}
 
-	//	if ((result = vkBindBufferMemory(renderer.device, renderer.index_buffer, device_memory, 0)) != VK_SUCCESS)
-	//	{
-	//		log(ERROR, "Failed to bind memory to the index buffer. (%d)", result);
-	//		return;
-	//	}
+		memcpy(data, &draw_list->VtxBuffer.front(), draw_list->VtxBuffer.size() * sizeof(ImDrawVert));
+		memcpy((u32*)data + index_offset, &draw_list->IdxBuffer.front(), draw_list->IdxBuffer.size() * sizeof(ImDrawIdx));
 
-	//	//vkCmdBindVertexBuffers(renderer.command_buffer, );
-	//	vkCmdBindIndexBuffer(renderer.command_buffer, renderer.index_buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkUnmapMemory(renderer.device, buffer_memory[i]);
 
-	//	for (s32 j = 0; j < draw_list->CmdBuffer.size(); j++)
-	//	{
-	//		ImDrawCmd* draw_cmd = &draw_list->CmdBuffer[j];
+		/*if ((result = vkMapMemory(renderer.device, buffer_memory[i], 0, vertex_memory_requirements.size, 0, &data)) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to map memory for vertex buffer. (%d)", result);
+			return;
+		}
 
-	//		if (draw_cmd->UserCallback)
-	//		{
-	//			draw_cmd->UserCallback(draw_list, draw_cmd);
-	//		}
-	//		else
-	//		{
-	//			VkRect2D scissor;
-	//			//scissor.extent.width = (u32)(draw_cmd->ClipRect.z - draw_cmd->ClipRect.x);
-	//			vkCmdSetScissor(renderer.command_buffer, 0, 1, &scissor);
+		memcpy(data, &draw_list->VtxBuffer.front(), draw_list->VtxBuffer.size() * sizeof(ImDrawVert));
 
-	//			vkCmdDrawIndexed(renderer.command_buffer, draw_cmd->ElemCount, 1, 0, 0, 0);
-	//		}
-	//		//idx_buffer += draw_cmd->ElemCount;
-	//	}
+		vkUnmapMemory(renderer.device, buffer_memory[i]);
 
-	//	vkFreeMemory(renderer.device, device_memory, nullptr);
-	//}
+		if ((result = vkMapMemory(renderer.device, buffer_memory[i], index_offset, index_memory_requirements.size, 0, &data)) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to map memory for index buffer. (%d)", result);
+			return;
+		}
+
+		memcpy(data, &draw_list->IdxBuffer.front(), draw_list->IdxBuffer.size() * sizeof(ImDrawIdx));
+
+		vkUnmapMemory(renderer.device, buffer_memory[i]);*/
+
+		if ((result = vkBindBufferMemory(renderer.device, vertex_buffer[i], buffer_memory[i], 0)) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to bind memory for vertex buffer. (%d)", result);
+			return;
+		}
+		
+		if ((result = vkBindBufferMemory(renderer.device, index_buffer[i], buffer_memory[i], index_offset)) != VK_SUCCESS)
+		{
+			log(ERROR, "Failed to bind memory for index buffer. (%d)", result);
+			return;
+		}
+
+		u64 offset = 0;
+		vkCmdBindVertexBuffers(renderer.command_buffer, 0, 1, &vertex_buffer[i], &offset);
+		vkCmdBindIndexBuffer(renderer.command_buffer, index_buffer[i], 0, VK_INDEX_TYPE_UINT16);
+
+		u32 render_offset = 0;
+
+		for (s32 j = 0; j < draw_list->CmdBuffer.size(); j++)
+		{
+			ImDrawCmd* draw_cmd = &draw_list->CmdBuffer[j];
+
+			if (draw_cmd->UserCallback)
+			{
+				draw_cmd->UserCallback(draw_list, draw_cmd);
+			}
+			else
+			{
+				VkRect2D scissor;
+				scissor.offset.x = (s32)draw_cmd->ClipRect.x;
+				scissor.offset.y = (s32)(renderer.height - draw_cmd->ClipRect.w);
+				scissor.extent.width = renderer.width; // TODO: Fix to proper scissor, once stuff renders
+				scissor.extent.height = renderer.height;
+				vkCmdSetScissor(renderer.command_buffer, 0, 1, &scissor);
+
+				vkCmdDrawIndexed(renderer.command_buffer, draw_cmd->ElemCount, 1, render_offset, 0, 0);
+				//vkCmdDraw(renderer.command_buffer, draw_cmd->ElemCount, 1, 0, 0);
+			}
+
+			render_offset += draw_cmd->ElemCount;
+		}
+	}
 
 	vkCmdEndRenderPass(renderer.command_buffer);
 
@@ -427,6 +420,8 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		log(ERROR, "Failed to end the command buffer. (%d)", result);
 		return;
 	}
+
+	vkDestroyFramebuffer(renderer.device, framebuffer, nullptr);
 
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -460,9 +455,16 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		log(ERROR, "Failed to wait for the queue to become idle. (%d)", result);
 		return;
 	}
+
+	for (s32 i = 0; i < draw_data->CmdListsCount; i++)
+	{
+		vkDestroyBuffer(renderer.device, vertex_buffer[i], nullptr);
+		vkDestroyBuffer(renderer.device, index_buffer[i], nullptr);
+		vkFreeMemory(renderer.device, buffer_memory[i], nullptr);
+	}
 }
 
-bool ImGuiVulkanRenderer::create_vulkan_basics(void* handle, void* h_instance, u8 device_num)
+bool ImGuiVulkanRenderer::prepare_vulkan(void* handle, void* h_instance, u8 device_num)
 {
 	// The names of validation layers
 	const char* validation_layer_names[] =
@@ -778,9 +780,10 @@ bool ImGuiVulkanRenderer::create_vulkan_basics(void* handle, void* h_instance, u
 
 	// Create a descriptor set layout
 	VkDescriptorSetLayoutBinding descriptor_set_layout_binding = {};
-	descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptor_set_layout_binding.binding = 0;
+	descriptor_set_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptor_set_layout_binding.descriptorCount = 1;
-	descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	descriptor_set_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info = {};
 	descriptor_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -793,11 +796,21 @@ bool ImGuiVulkanRenderer::create_vulkan_basics(void* handle, void* h_instance, u
 		return false;
 	}
 
+	// Push constants
+	VkPushConstantRange push_constant_ranges[2];
+	push_constant_ranges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	push_constant_ranges[0].size = sizeof(float) * 16;
+	push_constant_ranges[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	push_constant_ranges[1].offset = sizeof(float) * 16;
+	push_constant_ranges[1].size = sizeof(s32);
+
 	// Create the pipeline layout
 	VkPipelineLayoutCreateInfo pipeline_layout_info = {};
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_info.setLayoutCount = 1;
 	pipeline_layout_info.pSetLayouts = &descriptor_set_layout;
+	pipeline_layout_info.pushConstantRangeCount = 2;
+	pipeline_layout_info.pPushConstantRanges = push_constant_ranges;
 
 	if ((result = vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout)) != VK_SUCCESS)
 	{
@@ -805,24 +818,29 @@ bool ImGuiVulkanRenderer::create_vulkan_basics(void* handle, void* h_instance, u
 		return false;
 	}
 
-	// Prepare vertex input attribute
+	// Prepare vertex input bindings
+	vertex_input_binding.binding = 0;
+	vertex_input_binding.stride = sizeof(ImDrawVert);
+	vertex_input_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	// Prepare vertex input attributes
 	vertex_input_attribute[0].location = 0;
-	vertex_input_attribute[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	vertex_input_attribute[0].format = VK_FORMAT_R32G32_SFLOAT;
+	vertex_input_attribute[0].offset = offsetof(ImDrawVert, pos.x);
 
 	vertex_input_attribute[1].location = 1;
-	vertex_input_attribute[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	vertex_input_attribute[1].offset = sizeof(float) * 3;
+	vertex_input_attribute[1].format = VK_FORMAT_R32G32_SFLOAT;
+	vertex_input_attribute[1].offset = offsetof(ImDrawVert, uv.x);
 
-	// Prepare vertex binding attributes
-	vertex_input_binding.binding = 0;
-	vertex_input_binding.stride = sizeof(Vertex);
-	vertex_input_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	vertex_input_attribute[2].location = 2;
+	vertex_input_attribute[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+	vertex_input_attribute[2].offset = offsetof(ImDrawVert, col);
 
 	// Create a rendering pipeline
 	// Vertex input info
 	VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
 	vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_info.vertexAttributeDescriptionCount = 2;
+	vertex_input_info.vertexAttributeDescriptionCount = 3;
 	vertex_input_info.pVertexAttributeDescriptions = vertex_input_attribute;
 	vertex_input_info.vertexBindingDescriptionCount = 1;
 	vertex_input_info.pVertexBindingDescriptions = &vertex_input_binding;
@@ -933,7 +951,7 @@ bool ImGuiVulkanRenderer::create_vulkan_basics(void* handle, void* h_instance, u
 
 	// Setup a descriptor pool
 	VkDescriptorPoolSize descriptor_pool_size = {};
-	descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptor_pool_size.descriptorCount = 1;
 
 	VkDescriptorPoolCreateInfo descriptor_pool_info = {};
@@ -961,312 +979,124 @@ bool ImGuiVulkanRenderer::create_vulkan_basics(void* handle, void* h_instance, u
 		return false;
 	}
 
-	// Create a triangle buffer
-	std::vector<Vertex> vertex_buffer =
-	{
-		{{ 1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }},
-		{{ -1.0f,  1.0f, 0.0f },{ 0.0f, 1.0f, 0.0f }},
-		{{ 0.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }},
-	};
-
-	std::vector<u32> index_buffer = { 0, 1, 2 };
-
-	// Vertex buffer info
-	VkBufferCreateInfo vertex_buffer_info = {};
-	vertex_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	vertex_buffer_info.size = vertex_buffer.size() * sizeof(Vertex);
-	vertex_buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-	// Index buffer info
-	VkBufferCreateInfo index_buffer_info = {};
-	index_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	index_buffer_info.size = index_buffer.size() * sizeof(u32);
-	index_buffer_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-	if ((result = vkCreateBuffer(device, &vertex_buffer_info, nullptr, &triangle_vertices.buffer)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to create an index buffer for rendering. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkCreateBuffer(device, &index_buffer_info, nullptr, &triangle_indices.buffer)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to create an index buffer for rendering. (%d)", result);
-		return false;
-	}
-
-	void *data;
-	VkMemoryRequirements memory_requirements;
-	VkMemoryAllocateInfo memory_allocate_info = {};
-	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-
-	// Triangle vertices
-	vkGetBufferMemoryRequirements(device, triangle_vertices.buffer, &memory_requirements);
-
-	memory_allocate_info.allocationSize = memory_requirements.size;
-
-	if (!get_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocate_info.memoryTypeIndex))
-	{
-		log(ERROR, "Failed to get memory type for index buffer. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkAllocateMemory(device, &memory_allocate_info, nullptr, &triangle_vertices.memory)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to allocate memory for the index buffer. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkMapMemory(device, triangle_vertices.memory, 0, memory_allocate_info.allocationSize, 0, &data)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to map memory for the index buffer. (%d)", result);
-		return false;
-	}
-
-	memcpy(data, vertex_buffer.data(), vertex_buffer.size() * sizeof(Vertex));
-
-	vkUnmapMemory(device, triangle_vertices.memory);
-
-	if ((result = vkBindBufferMemory(device, triangle_vertices.buffer, triangle_vertices.memory, 0)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to bind memory to the index buffer. (%d)", result);
-		return false;
-	}
-
-	// Triangle indices
-	vkGetBufferMemoryRequirements(device, triangle_indices.buffer, &memory_requirements);
-
-	memory_allocate_info.allocationSize = memory_requirements.size;
-
-	if (!get_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocate_info.memoryTypeIndex))
-	{
-		log(ERROR, "Failed to get memory type for index buffer. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkAllocateMemory(device, &memory_allocate_info, nullptr, &triangle_indices.memory)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to allocate memory for the index buffer. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkMapMemory(device, triangle_indices.memory, 0, memory_allocate_info.allocationSize, 0, &data)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to map memory for the index buffer. (%d)", result);
-		return false;
-	}
-
-	memcpy(data, index_buffer.data(), index_buffer.size() * sizeof(u32));
-
-	vkUnmapMemory(device, triangle_indices.memory);
-
-	if ((result = vkBindBufferMemory(device, triangle_indices.buffer, triangle_indices.memory, 0)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to bind memory to the index buffer. (%d)", result);
-		return false;
-	}
-
-	// Prepare the uniform stuff
-	VkMemoryRequirements memReqs;
-	
-	// Vertex shader uniform buffer block
-	VkBufferCreateInfo uniform_buffer_info = {};
-	uniform_buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	uniform_buffer_info.size = sizeof(uniform_buffer);
-	uniform_buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-	if ((result = vkCreateBuffer(device, &uniform_buffer_info, nullptr, &uniform_data.buffer)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to create uniform buffer. (%d)", result);
-		return false;
-	}
-
-	vkGetBufferMemoryRequirements(device, uniform_data.buffer, &memReqs);
-
-	memory_allocate_info.allocationSize = memReqs.size;
-
-	if (!get_memory_type(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocate_info.memoryTypeIndex))
-	{
-		log(ERROR, "Failed to get memory type for uniform buffer. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkAllocateMemory(device, &memory_allocate_info, nullptr, &uniform_data.memory)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to allocate memory for uniform buffer. (%d)", result);
-		return false;
-	}
-
-	if ((result = vkBindBufferMemory(device, uniform_data.buffer, uniform_data.memory, 0)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to bind memory for uniform buffer. (%d)", result);
-		return false;
-	}
-
-	uniform_data.descriptor.buffer = uniform_data.buffer;
-	uniform_data.descriptor.offset = 0;
-	uniform_data.descriptor.range = sizeof(uniform_buffer);
-
-	// Uniform buffer stuff
-	glm::vec3 rotation = glm::vec3();
-	rotation.x = 1;
-	rotation.y = 1;
-	rotation.z = 1;
-
-	uniform_buffer.projection_matrix = glm::perspective(deg_to_rad(60.0f), (float)1100 / (float)800, 0.1f, 256.0f);
-
-	uniform_buffer.view_matrix = glm::translate(glm::mat4(), glm::vec3(0.0f, 0.0f, -2.5f));
-
-	uniform_buffer.model_matrix = glm::mat4();
-	uniform_buffer.model_matrix = glm::rotate(uniform_buffer.model_matrix, deg_to_rad(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	uniform_buffer.model_matrix = glm::rotate(uniform_buffer.model_matrix, deg_to_rad(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	uniform_buffer.model_matrix = glm::rotate(uniform_buffer.model_matrix, deg_to_rad(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-
-	// Map uniform buffer and update it
-	u8* data2;
-
-	if ((result = vkMapMemory(device, uniform_data.memory, 0, sizeof(uniform_buffer), 0, (void **)&data2)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to map memory for uniform buffer. (%d)", result);
-		return false;
-	}
-
-	memcpy(data2, &uniform_buffer, sizeof(uniform_buffer));
-	vkUnmapMemory(device, uniform_data.memory);
-
-	// Update descriptor sets
-	VkWriteDescriptorSet write_descriptor_set = {};
-	write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write_descriptor_set.dstBinding = 0;
-	write_descriptor_set.dstSet = descriptor_set;
-	write_descriptor_set.descriptorCount = 1;
-	write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	write_descriptor_set.pBufferInfo = &uniform_data.descriptor;
-
-	vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, nullptr);
-
-	return true;
-}
-
-bool ImGuiVulkanRenderer::prepare_fonts()
-{
 	ImGuiIO& io = ImGui::GetIO();
-	VkResult result;
+	u8* pixels;
+	s32 width, height;
 
-	// Upload the font texture to the GPU and get the font data from ImGui
-	io.Fonts->GetTexDataAsRGBA32(&font_texture.pixels, (s32*)&font_texture.width, (s32*)&font_texture.height, (s32*)&font_texture.bytes_per_pixel);
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
+	// Prepare font texture
 	VkImageCreateInfo image_info = {};
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	image_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 	image_info.imageType = VK_IMAGE_TYPE_2D;
 	image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+	image_info.extent = { (u32)width, (u32)height, 1 };
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
 	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	image_info.tiling = VK_IMAGE_TILING_LINEAR;
 	image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	image_info.flags = 0;
-	image_info.extent.width = font_texture.width;
-	image_info.extent.height = font_texture.height;
-	image_info.extent.depth = 1;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	if ((result = vkCreateImage(device, &image_info, nullptr, &font_texture.image)) != VK_SUCCESS)
+	if ((result = vkCreateImage(device, &image_info, nullptr, &font_image)) != VK_SUCCESS)
 	{
 		log(ERROR, "Failed to create a font image. (%d)", result);
 		return false;
 	}
 
-	// Get the memory requirements and allocate memory on the GPU
 	VkMemoryRequirements memory_requirements;
-	vkGetImageMemoryRequirements(device, font_texture.image, &memory_requirements);
+	vkGetImageMemoryRequirements(device, font_image, &memory_requirements);
 
-	VkMemoryAllocateInfo memory_allocate_info = {};
-	memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	memory_allocate_info.allocationSize = memory_requirements.size;
+	VkMemoryAllocateInfo memory_allocation_info = {};
+	memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	memory_allocation_info.allocationSize = memory_requirements.size;
 
-	if (!get_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocate_info.memoryTypeIndex))
+	if (!get_memory_type(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocation_info.memoryTypeIndex))
 	{
-		log(ERROR, "Failed to get memory type for font texture. (%d)", result);
+		log(ERROR, "Failed to get the memory type. (%d)", result);
 		return false;
 	}
 
-	if ((result = vkAllocateMemory(device, &memory_allocate_info, nullptr, &font_texture.device_memory)) != VK_SUCCESS)
+	if ((result = vkAllocateMemory(device, &memory_allocation_info, nullptr, &device_memory)) != VK_SUCCESS)
 	{
-		log(ERROR, "Failed to map memory for the font texture. (%d)", result);
+		log(ERROR, "Failed to allocate memory for font texture. (%d)", result);
 		return false;
 	}
 
-	// Bind the allocated memory to the texture
-	if ((result = vkBindImageMemory(device, font_texture.image, font_texture.device_memory, 0)) != VK_SUCCESS)
+	if ((result = vkBindImageMemory(device, font_image, device_memory, 0)) != VK_SUCCESS)
 	{
-		log(ERROR, "Failed to bind memory to the font texture. (%d)", result);
+		log(ERROR, "Failed to bind memory for font texture. (%d)", result);
 		return false;
 	}
 
-	// Image data pointer
-	void *image_data;
+	VkSamplerCreateInfo sampler_info;
+	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	sampler_info.magFilter = VK_FILTER_NEAREST;
+	sampler_info.minFilter = VK_FILTER_NEAREST;
+	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sampler_info.anisotropyEnable = VK_FALSE;
+	sampler_info.maxAnisotropy = 1;
+	sampler_info.compareOp = VK_COMPARE_OP_NEVER;
+	sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	sampler_info.unnormalizedCoordinates = VK_FALSE;
 
-	// Get image sub resource layout
+	if ((result = vkCreateSampler(device, &sampler_info, nullptr, &font_sampler)) != VK_SUCCESS)
+	{
+		log(ERROR, "Failed to create a sampler for font texture. (%d)", result);
+		return false;
+	}
+
+	VkImageViewCreateInfo image_view_info;
+	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	image_view_info.image = font_image;
+	image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	image_view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+	image_view_info.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+	image_view_info.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+	if ((result = vkCreateImageView(device, &image_view_info, nullptr, &font_image_view)) != VK_SUCCESS)
+	{
+		log(ERROR, "Failed to create image view for font texture. (%d)", result);
+		return false;
+	}
+	
+	// Update descriptors
+	VkDescriptorImageInfo descriptor_image_info = {};
+	descriptor_image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	descriptor_image_info.sampler = font_sampler;
+	descriptor_image_info.imageView = font_image_view;
+
+	VkWriteDescriptorSet write_descriptor_set = {};
+	write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write_descriptor_set.dstSet = descriptor_set;
+	write_descriptor_set.descriptorCount = 1;
+	write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write_descriptor_set.pImageInfo = &descriptor_image_info;
+
+	vkUpdateDescriptorSets(device, 1, &write_descriptor_set, 0, nullptr);
+
+	// Upload the image to the GPU
 	VkImageSubresource image_subresource = {};
 	image_subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 	VkSubresourceLayout subresource_layout = {};
+	vkGetImageSubresourceLayout(device, font_image, &image_subresource, &subresource_layout);
 
-	vkGetImageSubresourceLayout(device, font_texture.image, &image_subresource, &subresource_layout);
+	void* data;
 
-	if ((result = vkMapMemory(device, font_texture.device_memory, 0, memory_requirements.size, 0, &image_data)) != VK_SUCCESS)
+	if ((result = vkMapMemory(device, device_memory, 0, subresource_layout.size, 0, &data)) != VK_SUCCESS)
 	{
-		log(ERROR, "Failed to obtain image subresource layout. (%d)", result);
+		log(ERROR, "Failed to map memory for font texture upload. (%d)", result);
 		return false;
 	}
 
-	// Copy the texture to memory
-	memcpy(image_data, font_texture.pixels, font_texture.width * font_texture.height * font_texture.bytes_per_pixel);
-	vkUnmapMemory(device, font_texture.device_memory);
+	memcpy(data, pixels, subresource_layout.size);
 
-	font_texture.image_layout = VK_IMAGE_LAYOUT_GENERAL;
-
-	// Create a sampler for the image
-	VkSamplerCreateInfo sampler_info = {};
-	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	sampler_info.magFilter = VK_FILTER_LINEAR;
-	sampler_info.minFilter = VK_FILTER_LINEAR;
-	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	sampler_info.compareOp = VK_COMPARE_OP_NEVER;
-	sampler_info.anisotropyEnable = VK_FALSE;
-	sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-	if ((result = vkCreateSampler(device, &sampler_info, nullptr, &font_texture.sampler)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to create the font image sampler. (%d)", result);
-		return false;
-	}
-
-	// Create an image view
-	VkImageViewCreateInfo image_view_info = {};
-	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	image_view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-	image_view_info.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-	image_view_info.subresourceRange.baseArrayLayer = 0;
-	image_view_info.subresourceRange.baseMipLevel = 0;
-	image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	image_view_info.subresourceRange.layerCount = 1;
-	image_view_info.subresourceRange.levelCount = 1;
-	image_view_info.image = font_texture.image;
-
-	if ((result = vkCreateImageView(device, &image_view_info, nullptr, &font_texture.image_view)) != VK_SUCCESS)
-	{
-		log(ERROR, "Failed to create an image view. (%d)", result);
-		return false;
-	}
-
-	io.Fonts->TexID = (void*)&font_texture.image_view;
+	vkUnmapMemory(device, device_memory);
 
 	return true;
 }
@@ -1279,15 +1109,9 @@ bool ImGuiVulkanRenderer::initialize(void* handle, void* h_instance, u8 device_n
 	io.RenderDrawListsFn = imgui_render;
 	io.UserData = this;
 
-	if (!create_vulkan_basics(handle, h_instance, device_num))
+	if (!prepare_vulkan(handle, h_instance, device_num))
 	{
 		log(ERROR, "Failed to initialize Vulkan renderer.");
-		return false;
-	}
-
-	if (!prepare_fonts())
-	{
-		log(ERROR, "Failed to prepare fonts for use.");
 		return false;
 	}
 

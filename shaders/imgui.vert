@@ -3,20 +3,24 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 inPos;
-layout (location = 1) in vec3 inColor;
-
-layout (binding = 0) uniform UBO 
+layout(push_constant) uniform PushConstants
 {
-	mat4 projectionMatrix;
-	mat4 modelMatrix;
-	mat4 viewMatrix;
-} ubo;
+  mat4 projection_matrix;
+  int restrict_texture_samples;
+} push_constants;
 
-layout (location = 0) out vec3 outColor;
+layout(location = 0) in vec3 in_pos;
+layout(location = 1) in vec3 in_color;
+//layout(location = 2) in vec3 in_color;
+
+layout(location = 0) out vec3 out_color;
+layout(location = 1) out vec4 vtx_color;
 
 void main() 
 {
-	outColor = inColor;
-	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+	// push_constants.projection_matrix
+	gl_Position = vec4(in_pos.xyz, 1.0);
+	//gl_Position.y = -gl_Position.y;
+	out_color = in_color;
+	//vtx_color = in_color;
 }

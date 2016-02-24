@@ -17,12 +17,6 @@ struct Texture
 	u8* pixels;
 };
 
-struct Vertex
-{
-	float pos[3];
-	float col[3];
-};
-
 class ImGuiVulkanRenderer
 {
 public:
@@ -50,39 +44,15 @@ public:
 	VkDescriptorSet descriptor_set;
 	VkDescriptorSetLayout descriptor_set_layout;
 	VkDescriptorPool descriptor_pool;
-	VkVertexInputAttributeDescription vertex_input_attribute[2];
+	VkVertexInputAttributeDescription vertex_input_attribute[3];
 	VkVertexInputBindingDescription vertex_input_binding;
-	VkBuffer vertex_buffer;
-	VkBuffer index_buffer;
 	VkRenderPass render_pass;
-	Texture font_texture;
 
-	// Triangle
-	struct
-	{
-		glm::mat4 projection_matrix;
-		glm::mat4 model_matrix;
-		glm::mat4 view_matrix;
-	} uniform_buffer;
-
-	struct
-	{
-		VkBuffer buffer;
-		VkDeviceMemory memory;
-		VkDescriptorBufferInfo descriptor;
-	}  uniform_data;
-
-	struct
-	{
-		VkBuffer buffer;
-		VkDeviceMemory memory;
-	} triangle_vertices;
-
-	struct
-	{
-		VkBuffer buffer;
-		VkDeviceMemory memory;
-	} triangle_indices;
+	// For font
+	VkImage font_image;
+	VkImageView font_image_view;
+	VkSampler font_sampler;
+	VkDeviceMemory device_memory;
 
 	// For convenience
 	VkBool32 get_memory_type(u32 typeBits, VkFlags properties, u32 *typeIndex);
@@ -99,8 +69,7 @@ private:
 	VkShaderModule load_shader_GLSL(std::string file_name);
 
 	// Internal functions for Vulkan
-	bool create_vulkan_basics(void* handle, void* h_instance, u8 device_num);
-	bool prepare_fonts();
+	bool prepare_vulkan(void* handle, void* h_instance, u8 device_num);
 
 	// ImGui
 	static void imgui_render(ImDrawData* draw_data);
