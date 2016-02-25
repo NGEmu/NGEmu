@@ -421,8 +421,6 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		return;
 	}
 
-	vkDestroyFramebuffer(renderer.device, framebuffer, nullptr);
-
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.waitSemaphoreCount = 1;
@@ -448,13 +446,14 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		return;
 	}
 
-	vkDestroySemaphore(renderer.device, semaphore, nullptr);
-
 	if ((result = vkQueueWaitIdle(renderer.queue)) != VK_SUCCESS)
 	{
 		log(ERROR, "Failed to wait for the queue to become idle. (%d)", result);
 		return;
 	}
+
+	vkDestroyFramebuffer(renderer.device, framebuffer, nullptr);
+	vkDestroySemaphore(renderer.device, semaphore, nullptr);
 
 	for (s32 i = 0; i < draw_data->CmdListsCount; i++)
 	{
