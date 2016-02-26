@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "ImGuiVulkanRenderer.h"
 
-// NOTE: This code is terrible and makes you puke. I know it. Here's a picture of Vulkan API, as described by Nvidia's driver team:
+// NOTE: This code is not very good. I know it. Here's a picture of Vulkan API, as described by Nvidia's driver team:
 //                                        ,   ,  
 //                                        $,  $,     ,            
 //                                        "ss.$ss. .s'     
@@ -191,10 +191,12 @@ ImGuiVulkanRenderer::~ImGuiVulkanRenderer()
 
 void ImGuiVulkanRenderer::new_frame(u32 width_in, u32 height_in)
 {
-	ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize = ImVec2((float)width_in, (float)height_in);
 	width = width_in;
 	height = height_in;
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize.x = (float)width;
+	io.DisplaySize.y = (float)height;
 
 	ImGui::NewFrame();
 }
@@ -321,13 +323,13 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		vkGetBufferMemoryRequirements(renderer.device, vertex_buffer[i], &vertex_memory_requirements);
 		vkGetBufferMemoryRequirements(renderer.device, index_buffer[i], &index_memory_requirements);
 
-		// Calculate the offset for being properly aligned
-		u64 index_offset = draw_list->VtxBuffer.size() * sizeof(ImDrawVert);
-		index_offset = index_offset + index_memory_requirements.alignment - (index_offset % index_memory_requirements.alignment);
+		// Calculate the offset for properly aligning the indices
+		u64 index_buffer_offset = draw_list->VtxBuffer.size() * sizeof(ImDrawVert);
+		index_buffer_offset = index_buffer_offset + index_memory_requirements.alignment - (index_buffer_offset % index_memory_requirements.alignment);
 
 		VkMemoryAllocateInfo memory_allocation_info = {};
 		memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		memory_allocation_info.allocationSize = vertex_memory_requirements.size + index_offset;
+		memory_allocation_info.allocationSize = vertex_memory_requirements.size + index_memory_requirements.size;
 
 		renderer.get_memory_type(vertex_memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &memory_allocation_info.memoryTypeIndex);
 
@@ -346,29 +348,12 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		}
 
 		memcpy(data, &draw_list->VtxBuffer.front(), draw_list->VtxBuffer.size() * sizeof(ImDrawVert));
-		memcpy((u32*)data + index_offset, &draw_list->IdxBuffer.front(), draw_list->IdxBuffer.size() * sizeof(ImDrawIdx));
+		memcpy((u32*)data + index_buffer_offset, &draw_list->IdxBuffer.front(), draw_list->IdxBuffer.size() * sizeof(ImDrawIdx));
+
+		/*log(DEBUG, "vert_size: %d", draw_list->VtxBuffer.size() * sizeof(ImDrawVert));
+		log(DEBUG, "index_buffer_offset: %d", index_buffer_offset);*/
 
 		vkUnmapMemory(renderer.device, buffer_memory[i]);
-
-		/*if ((result = vkMapMemory(renderer.device, buffer_memory[i], 0, vertex_memory_requirements.size, 0, &data)) != VK_SUCCESS)
-		{
-			log(ERROR, "Failed to map memory for vertex buffer. (%d)", result);
-			return;
-		}
-
-		memcpy(data, &draw_list->VtxBuffer.front(), draw_list->VtxBuffer.size() * sizeof(ImDrawVert));
-
-		vkUnmapMemory(renderer.device, buffer_memory[i]);
-
-		if ((result = vkMapMemory(renderer.device, buffer_memory[i], index_offset, index_memory_requirements.size, 0, &data)) != VK_SUCCESS)
-		{
-			log(ERROR, "Failed to map memory for index buffer. (%d)", result);
-			return;
-		}
-
-		memcpy(data, &draw_list->IdxBuffer.front(), draw_list->IdxBuffer.size() * sizeof(ImDrawIdx));
-
-		vkUnmapMemory(renderer.device, buffer_memory[i]);*/
 
 		if ((result = vkBindBufferMemory(renderer.device, vertex_buffer[i], buffer_memory[i], 0)) != VK_SUCCESS)
 		{
@@ -376,7 +361,7 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 			return;
 		}
 		
-		if ((result = vkBindBufferMemory(renderer.device, index_buffer[i], buffer_memory[i], index_offset)) != VK_SUCCESS)
+		if ((result = vkBindBufferMemory(renderer.device, index_buffer[i], buffer_memory[i], index_buffer_offset)) != VK_SUCCESS)
 		{
 			log(ERROR, "Failed to bind memory for index buffer. (%d)", result);
 			return;
@@ -386,7 +371,7 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 		vkCmdBindVertexBuffers(renderer.command_buffer, 0, 1, &vertex_buffer[i], &offset);
 		vkCmdBindIndexBuffer(renderer.command_buffer, index_buffer[i], 0, VK_INDEX_TYPE_UINT16);
 
-		u32 render_offset = 0;
+		u32 index_offset = 0;
 
 		for (s32 j = 0; j < draw_list->CmdBuffer.size(); j++)
 		{
@@ -401,15 +386,15 @@ void ImGuiVulkanRenderer::imgui_render(ImDrawData* draw_data)
 				VkRect2D scissor;
 				scissor.offset.x = (s32)draw_cmd->ClipRect.x;
 				scissor.offset.y = (s32)(renderer.height - draw_cmd->ClipRect.w);
-				scissor.extent.width = renderer.width; // TODO: Fix to proper scissor, once stuff renders
-				scissor.extent.height = renderer.height;
+				scissor.extent.width = (s32)(draw_cmd->ClipRect.z - draw_cmd->ClipRect.x);
+				scissor.extent.height = (s32)(draw_cmd->ClipRect.w - draw_cmd->ClipRect.y);
 				vkCmdSetScissor(renderer.command_buffer, 0, 1, &scissor);
 
-				vkCmdDrawIndexed(renderer.command_buffer, draw_cmd->ElemCount, 1, render_offset, 0, 0);
-				//vkCmdDraw(renderer.command_buffer, draw_cmd->ElemCount, 1, 0, 0);
+				vkCmdDrawIndexed(renderer.command_buffer, draw_cmd->ElemCount, 1, index_offset, 0, 0);
+				//vkCmdDraw(renderer.command_buffer, draw_cmd->ElemCount, 1, 0, 0); // This more or less works
 			}
 
-			render_offset += draw_cmd->ElemCount;
+			index_offset += draw_cmd->ElemCount;
 		}
 	}
 
@@ -825,11 +810,11 @@ bool ImGuiVulkanRenderer::prepare_vulkan(void* handle, void* h_instance, u8 devi
 	// Prepare vertex input attributes
 	vertex_input_attribute[0].location = 0;
 	vertex_input_attribute[0].format = VK_FORMAT_R32G32_SFLOAT;
-	vertex_input_attribute[0].offset = offsetof(ImDrawVert, pos.x);
+	vertex_input_attribute[0].offset = offsetof(ImDrawVert, pos);
 
 	vertex_input_attribute[1].location = 1;
 	vertex_input_attribute[1].format = VK_FORMAT_R32G32_SFLOAT;
-	vertex_input_attribute[1].offset = offsetof(ImDrawVert, uv.x);
+	vertex_input_attribute[1].offset = offsetof(ImDrawVert, uv);
 
 	vertex_input_attribute[2].location = 2;
 	vertex_input_attribute[2].format = VK_FORMAT_R8G8B8A8_UNORM;
