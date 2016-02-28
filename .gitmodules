@@ -13,3 +13,6 @@
 [submodule "glm"]
 	path = glm
 	url = https://github.com/g-truc/glm.git
+[submodule "ImGuiVulkanRenderer"]
+	path = ImGuiVulkanRenderer
+	url = https://github.com/tambry/ImGuiVulkanRenderer

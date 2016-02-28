@@ -24,9 +24,6 @@
     <ClCompile Include="Debugger\Debugger.cpp">
       <Filter>Emulator\Debugger</Filter>
     </ClCompile>
-    <ClCompile Include="Debugger\ImGuiVulkanRenderer.cpp">
-      <Filter>Emulator\Debugger</Filter>
-    </ClCompile>
     <ClCompile Include="..\imgui\imgui.cpp">
       <Filter>ImGui</Filter>
     </ClCompile>
@@ -42,9 +39,6 @@
       <Filter>Emulator</Filter>
     </ClInclude>
     <ClInclude Include="Debugger\Debugger.h">
-      <Filter>Emulator\Debugger</Filter>
-    </ClInclude>
-    <ClInclude Include="Debugger\ImGuiVulkanRenderer.h">
       <Filter>Emulator\Debugger</Filter>
     </ClInclude>
     <ClInclude Include="..\imgui\imconfig.h">
