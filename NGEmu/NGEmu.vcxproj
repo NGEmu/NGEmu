@@ -142,6 +142,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="CPU\CPU.cpp" />
     <ClCompile Include="Debugger\Debugger.cpp" />
     <ClCompile Include="NGEmu.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -153,6 +154,7 @@
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
+    <ClInclude Include="CPU\CPU.h" />
     <ClInclude Include="Debugger\Debugger.h" />
     <ClInclude Include="NGEmu.h" />
     <ClInclude Include="stdafx.h" />

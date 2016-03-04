@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Debugger/Debugger.h"
+#include "CPU/CPU.h"
+
 class Emulator
 {
 public:
@@ -10,11 +13,13 @@ public:
 
 	bool running;
 	bool emulating;
+	bool debugging;
+
+	// For other parts of emulator to access
+	std::unique_ptr<Debugger> debugger;
+	std::unique_ptr<CPU> cpu;
 
 private:
-	std::unique_ptr<Debugger> debugger;
-	//std::unique_ptr<CPU> debugger;
-
-	void pause();
-	void stop();
 };
+
+extern Emulator emulator;

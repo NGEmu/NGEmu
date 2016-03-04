@@ -6,7 +6,8 @@
 class Debugger
 {
 public:
-	Debugger(std::function<void()> pause_callback, std::function<void()> stop_callback);
+	Debugger();
+	~Debugger();
 	bool initialize();
 	void render();
 
@@ -17,7 +18,5 @@ private:
 	std::unique_ptr<ImGuiVulkanRenderer> renderer;
 	bool opened;
 
-	// Emulator callbacks
-	std::function<void()> pause;
-	std::function<void()> stop;
+	void display_debugger();
 };

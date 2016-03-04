@@ -1,6 +1,7 @@
 #include "stdafx.h"
-#include "Debugger/Debugger.h"
 #include "NGEmu.h"
+
+Emulator emulator;
 
 s32 main(s32 argc, char* argv[])
 {
@@ -11,8 +12,6 @@ s32 main(s32 argc, char* argv[])
 		log(ERROR, "Failed to initialize logging.");
 		return exit(true);
 	}
-
-	Emulator emulator;
 
 	if (!emulator.initialize())
 	{
@@ -28,17 +27,8 @@ Emulator::Emulator()
 {
 	running = true;
 	emulating = true;
-	debugger.reset(new Debugger(std::bind(&Emulator::pause, this), std::bind(&Emulator::stop, this)));
-}
-
-void Emulator::pause()
-{
-	emulating = false;
-}
-
-void Emulator::stop()
-{
-	running = false;
+	debugger.reset(new Debugger());
+	cpu.reset(new CPU());
 }
 
 bool Emulator::initialize()
@@ -63,8 +53,7 @@ void Emulator::emulate(u64 clock)
 	{
 		if (emulating)
 		{
-			// TODO: Emulation
-			//cpu->execute();
+			cpu->execute();
 
 			// Calculate instructions per second
 			ips++;

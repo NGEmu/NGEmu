@@ -33,6 +33,9 @@
     <ClCompile Include="..\imgui\imgui_draw.cpp">
       <Filter>ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="CPU\CPU.cpp">
+      <Filter>Emulator\CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -52,6 +55,9 @@
     </ClInclude>
     <ClInclude Include="NGEmu.h">
       <Filter>Emulator</Filter>
+    </ClInclude>
+    <ClInclude Include="CPU\CPU.h">
+      <Filter>Emulator\CPU</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

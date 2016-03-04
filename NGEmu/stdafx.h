@@ -7,3 +7,5 @@
 
 #include <sstream>
 #include "imgui.h"
+
+#include "NGEmu.h"
