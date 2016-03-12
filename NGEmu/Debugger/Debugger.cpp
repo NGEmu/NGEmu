@@ -46,9 +46,17 @@ s64 Debugger::window_callback(HWND& handle, u32& msg, u64& param1, s64& param2)
 		}
 		break;
 
+	case WM_CHAR:
+		if (param1 > 0 && param1 < 0x10000)
+		{
+			io.AddInputCharacter((u8)param1);
+		}
+		break;
+
 	case WM_DESTROY:
 		emulator.running = false;
 		opened = false;
+		ImGui::Shutdown();
 		break;
 	}
 
@@ -91,7 +99,6 @@ Debugger::Debugger()
 Debugger::~Debugger()
 {
 	emulator.debugging = false;
-	emulator.cpu->breakpoint = -1;
 }
 
 bool Debugger::initialize()
@@ -125,6 +132,39 @@ bool Debugger::initialize()
 	return true;
 }
 
+std::string Debugger::parse_instruction(u32 opcode, u32 PC)
+{
+	u8 condition = (opcode & 0xFF) >> 4;
+	u8 id = (opcode & 0xF); // The full 4 bit ID of the instruction
+	u8 id3 = (opcode & 0xF) >> 1; // First 3 bits of the ID, to help with identification
+
+	if (condition == 0b1111)
+	{
+		return "Undefined instruction";
+	}
+
+	switch (id3)
+	{
+	case BRANCH_ID:
+	{
+		bool link = id & 1;
+		u32 address = (((s32)((opcode >> 8) << 8) >> 8) << 2) + PC + 8;
+
+		if (link)
+		{
+			return format("BL %X", address);
+		}
+		else
+		{
+			return format("B %X", address);
+		}
+	}
+	break;
+	}
+
+	return "Unknown";
+}
+
 void Debugger::display_debugger()
 {
 	bool display_disassembly = true;
@@ -156,9 +196,6 @@ void Debugger::display_debugger()
 
 	ImGui::SameLine();
 
-	// TODO: Go to address
-	//ImGui::InputText("", buffer, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
-
 	// The scrolling needs to be performed later, once we have already created the disassembly window
 	bool scroll_to_pc = false;
 
@@ -167,13 +204,17 @@ void Debugger::display_debugger()
 		scroll_to_pc = true;
 	}
 
+	ImGui::SameLine();
+
+	ImGui::Checkbox("Track PC", &track_pc);
+
 	ImGui::EndChild();
 	ImGui::BeginChild("Disassembly", ImVec2(592, 760), true);
 	
 	ImGui::Columns(4, "Disassembly");
 	ImGui::SetColumnOffset(1, 26);
-	ImGui::SetColumnOffset(2, 90);
-	ImGui::SetColumnOffset(3, 182);
+	ImGui::SetColumnOffset(2, 96);
+	ImGui::SetColumnOffset(3, 188);
 	ImGui::Text(""); ImGui::NextColumn(); // To indicate a breakpoint
 	ImGui::Text("Address"); ImGui::NextColumn();
 	ImGui::Text("Bytes"); ImGui::NextColumn();
@@ -187,13 +228,16 @@ void Debugger::display_debugger()
 	ImVec2 screen_cursor = ImGui::GetCursorScreenPos();
 
 	// Perform scrolling, if necessary
-	if (scroll_to_pc)
+	if (track_pc || scroll_to_pc)
 	{
-		ImGui::SetScrollFromPosY(emulator.cpu->PC * ImGui::GetTextLineHeight());
+		ImGui::SetScrollFromPosY(((emulator.cpu->PC / 4) * ImGui::GetTextLineHeight()) - ImGui::GetScrollY(), 0.35f);
 	}
 
 	for (s32 i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
 	{
+		s32 clipper_i = i;
+		i *= 4;
+
 		screen_cursor = ImGui::GetCursorScreenPos();
 
 		if (ImGui::Selectable("", emulator.cpu->PC == i, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick))
@@ -210,27 +254,30 @@ void Debugger::display_debugger()
 
 		ImGui::NextColumn();
 		ImGui::Text("0x%X", i); ImGui::NextColumn();
-		ImGui::Text("DE AD B0 0B", i); ImGui::NextColumn();
-		ImGui::Text("MOV R0, #0"); ImGui::NextColumn();
+		ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 3));
+		ImGui::NextColumn();
+		ImGui::Text("%s", parse_instruction(emulator.cpu->memory.read32(i), i)); ImGui::NextColumn();
+
+		i = clipper_i;
 	}
 
 	clipper.End();
 	ImGui::EndChild();
 	ImGui::SameLine();
-	ImGui::BeginChild("Registers", ImVec2(200, 280), true);
+	ImGui::BeginChild("Registers", ImVec2(200, 300), true);
 
 	for (u8 i = 0; i < 13; i++)
 	{
-		ImGui::Text("R%d: 0x%X", i, emulator.cpu->registers[i]);
+		ImGui::Text("R%d: 0x%X", i, emulator.cpu->GPR[i]);
 	}
 
 	ImGui::Text("SP: 0x%X", emulator.cpu->SP);
 	ImGui::Text("LR: 0x%X", emulator.cpu->LR);
 	ImGui::Text("PC: 0x%X", emulator.cpu->PC);
+	ImGui::Text("CPSR: 0x%X", emulator.cpu->CPSR);
 
 	ImGui::EndChild();
 	ImGui::End();
-
 }
 
 void Debugger::render()

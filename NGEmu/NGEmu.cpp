@@ -6,6 +6,12 @@ Emulator emulator;
 s32 main(s32 argc, char* argv[])
 {
 	std::string log_name = "NGEmu.log";
+	std::string rom = "Tombraider.app"; // If a ROM isn't specified on command line, then execute the ROM specified here
+
+	if (argc >= 2)
+	{
+		rom = argv[1];
+	}
 
 	if (!init_logging(log_name))
 	{
@@ -13,7 +19,7 @@ s32 main(s32 argc, char* argv[])
 		return exit(true);
 	}
 
-	if (!emulator.initialize())
+	if (!emulator.initialize(rom))
 	{
 		return exit(true);
 	}
@@ -28,15 +34,21 @@ Emulator::Emulator()
 	running = true;
 	emulating = true;
 	debugger.reset(new Debugger());
-	cpu.reset(new CPU());
 }
 
-bool Emulator::initialize()
+bool Emulator::initialize(std::string path)
 {
 	if (!debugger->initialize())
 	{
 		return false;
 	}
+
+	if (!loader::load(path, rom))
+	{
+		return false;
+	}
+
+	cpu.reset(new CPU());
 
 	return true;
 }
@@ -63,7 +75,7 @@ void Emulator::emulate(u64 clock)
 			{
 				u64 cur_ips = ips - old_ips;
 
-				//log(DEBUG, "ips: %d", cur_ips);
+				log(DEBUG, "ips: %d", cur_ips);
 
 				old_ips = ips;
 				begin = std::chrono::steady_clock::now();
@@ -79,7 +91,7 @@ void Emulator::run()
 	std::thread emulation_thread = std::thread([this]
 	{
 		// The clock speed
-		const u32 clock_speed = 1000;
+		const u32 clock_speed = 100;
 		emulate(clock_speed);
 	});
 

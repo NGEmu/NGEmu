@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Loader/Loader.h"
 #include "Debugger/Debugger.h"
 #include "CPU/CPU.h"
 
@@ -7,7 +8,7 @@ class Emulator
 {
 public:
 	Emulator();
-	bool initialize();
+	bool initialize(std::string path);
 	void run();
 	void emulate(u64 clock);
 
@@ -18,6 +19,7 @@ public:
 	// For other parts of emulator to access
 	std::unique_ptr<Debugger> debugger;
 	std::unique_ptr<CPU> cpu;
+	E32Image rom;
 
 private:
 };

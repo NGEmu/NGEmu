@@ -144,6 +144,7 @@
     </ClCompile>
     <ClCompile Include="CPU\CPU.cpp" />
     <ClCompile Include="Debugger\Debugger.cpp" />
+    <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="NGEmu.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -155,7 +156,9 @@
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
     <ClInclude Include="CPU\CPU.h" />
+    <ClInclude Include="CPU\Memory.h" />
     <ClInclude Include="Debugger\Debugger.h" />
+    <ClInclude Include="Loader\Loader.h" />
     <ClInclude Include="NGEmu.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
