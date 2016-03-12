@@ -18,7 +18,9 @@ private:
 	std::unique_ptr<ImGuiVulkanRenderer> renderer;
 
 	void display_debugger();
+	std::string get_register_name(u8 reg);
 	std::string parse_instruction(u32 opcode, u32 PC);
+	std::string parse_thumb_instruction(u16 opcode, u32 PC);
 
 	bool opened;
 	bool track_pc = true;

@@ -71,7 +71,7 @@ bool loader::parse(E32Image& image)
 	image.signature = data32[4];
 	image.cpu = data32[5];
 	image.code_checksum = data32[6];
-	image.format = data32[7];
+	image.data_checksum = data32[7];
 	image.major = data32[8] & 0xFF;
 	image.minor = data32[8] & 0xFF00;
 	image.build = data32[8] >> 16;

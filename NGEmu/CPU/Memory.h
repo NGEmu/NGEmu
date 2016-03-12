@@ -15,7 +15,6 @@ public:
 
 	inline u32 read32(u32 address)
 	{
-		//log(DEBUG, "0x%X (0x%X)", read16(address) << 8, address);
 		return (read16(address) << 16) | read16(address + 2);
 	}
 
@@ -27,3 +26,31 @@ public:
 private:
 	u8 memory[0x380000] = {};
 };
+
+// Memory manipulation functions
+inline bool get_bit(u32& value, u8 bit)
+{
+	return (value >> bit) & 1;
+}
+
+inline void set_bit(u32& value, u8 bit)
+{
+	value |= 1 << bit;
+}
+
+inline void clear_bit(u32& value, u8 bit)
+{
+	value &= ~(1 << bit);
+}
+
+inline void set_bit(u32& value, u8 bit, bool state)
+{
+	if (state)
+	{
+		set_bit(value, bit);
+	}
+	else
+	{
+		clear_bit(value, bit);
+	}
+}

@@ -119,6 +119,7 @@ bool Debugger::initialize()
 	options.clear_value = clear_value;
 	options.device_number = 0;
 	options.validation_layers = false;
+	options.use_precompiled_shaders = true;
 
 	if (!renderer->initialize(window->get_handle(), window->get_instance(), options))
 	{
@@ -132,6 +133,23 @@ bool Debugger::initialize()
 	return true;
 }
 
+std::string Debugger::get_register_name(u8 reg)
+{
+	switch (reg)
+	{
+	case 0xD:
+		return "SP";
+		
+	case 0xE:
+		return "LR";
+
+	case 0xF:
+		return "PC";
+	}
+
+	return format("R%d", reg);
+}
+
 std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 {
 	u8 condition = (opcode & 0xFF) >> 4;
@@ -140,15 +158,47 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 	if (condition == 0b1111)
 	{
-		return "Undefined instruction";
+		return "0b1111 (report this)";
 	}
 
 	switch (id3)
 	{
+	case VARIOUS:
+	{
+		u8 id2 = ((opcode >> 15) & 1) | ((opcode & 1) << 1);
+
+		if (id2 == 0b0010 && !((opcode >> 12) & 1) && !((opcode >> 4) & 1))
+		{
+			u8 operation = opcode >> 28;
+			u8 operation_minor = (opcode >> 13) & 3;
+
+			switch (operation)
+			{
+			case 0b0001:
+			{
+				if (operation_minor == 0b0011)
+				{
+					return "CLZ ???";
+				}
+				else
+				{
+					u8 Rm = (opcode >> 24) & 0xF;
+					return format("BX %s", get_register_name(Rm));
+				}
+			}
+			break;
+
+			default:
+				log(ERROR, "Unknown miscellaneous operation");
+			}
+		}
+	}
+	break;
+
 	case BRANCH_ID:
 	{
 		bool link = id & 1;
-		u32 address = (((s32)((opcode >> 8) << 8) >> 8) << 2) + PC + 8;
+		u32 address = ((((s32)(opcode >> 8) << 8) >> 8) << 2) + PC + 8;
 
 		if (link)
 		{
@@ -160,8 +210,31 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 		}
 	}
 	break;
+
+	case DATA_PROCESSING:
+	{
+		u8 sub_opcode = (opcode >> 13) | ((opcode & 1) << 3);
+
+		switch (sub_opcode)
+		{
+		case MOVE_ID:
+		{
+			u8 Rd = (opcode >> 16) & 0xF;
+			u16 operand = opcode >> 24;
+
+			return format("MOV %s, #%X", get_register_name(Rd), operand & 0xF);
+		}
+		break;
+		}
+	}
+	break;
 	}
 
+	return "Unknown";
+}
+
+std::string Debugger::parse_thumb_instruction(u16 opcode, u32 PC)
+{
 	return "Unknown";
 }
 
@@ -221,7 +294,9 @@ void Debugger::display_debugger()
 	ImGui::Text("Instruction"); ImGui::NextColumn();
 	ImGui::Separator();
 
-	ImGuiListClipper clipper(0x380000 / 4, ImGui::GetTextLineHeight()); // Bytes are grouped by four (the alignment for instructions)
+	u8 instruction_bytes = emulator.cpu->thumb ? 2 : 4;
+
+	ImGuiListClipper clipper(0x380000 / instruction_bytes, ImGui::GetTextLineHeight()); // Bytes are grouped by four (the alignment for instructions)
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	ImColor breakpoint_fill = ImColor(ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
 	ImColor breakpoint_border = ImColor(ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -230,7 +305,7 @@ void Debugger::display_debugger()
 	// Perform scrolling, if necessary
 	if (track_pc || scroll_to_pc)
 	{
-		ImGui::SetScrollFromPosY(((emulator.cpu->PC / 4) * ImGui::GetTextLineHeight()) - ImGui::GetScrollY(), 0.35f);
+		ImGui::SetScrollFromPosY(((emulator.cpu->PC / instruction_bytes) * ImGui::GetTextLineHeight()) - ImGui::GetScrollY(), 0.35f);
 	}
 
 	for (s32 i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
@@ -256,7 +331,17 @@ void Debugger::display_debugger()
 		ImGui::Text("0x%X", i); ImGui::NextColumn();
 		ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 3));
 		ImGui::NextColumn();
-		ImGui::Text("%s", parse_instruction(emulator.cpu->memory.read32(i), i)); ImGui::NextColumn();
+
+		if (emulator.cpu->thumb)
+		{
+			ImGui::Text("%s", parse_thumb_instruction(emulator.cpu->memory.read16(i), i).c_str());
+		}
+		else
+		{
+			ImGui::Text("%s", parse_instruction(emulator.cpu->memory.read32(i), i).c_str());
+		}
+
+		ImGui::NextColumn();
 
 		i = clipper_i;
 	}

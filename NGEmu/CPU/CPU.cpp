@@ -12,7 +12,9 @@ CPU::CPU()
 		memory.write8(static_cast<u32>(i), emulator.rom.data[i]);
 	}
 
-	instructions[BRANCH] = &CPU::branch;
+	instructions[BRANCH]          = &CPU::branch;
+	instructions[MOVE]            = &CPU::move;
+	instructions[BRANCH_EXCHANGE] = &CPU::branch_exchange;
 }
 
 // Fetch the opcode
@@ -29,9 +31,11 @@ inline bool CPU::decode()
 	u8 id = (opcode & 0xF); // The full 4 bit ID of the instruction
 	u8 id3 = (opcode & 0xF) >> 1; // First 3 bits of the ID, to help with identification
 
+	log(DEBUG, "0x%X", opcode);
+
 	switch(condition)
 	{
-	case 0b1110: // Execute always
+	case 0b1110: // Always (Unconditional execution)
 		break;
 
 	default:
@@ -41,9 +45,66 @@ inline bool CPU::decode()
 
 	switch (id3)
 	{
+	case VARIOUS:
+	{
+		u8 id2 = ((opcode >> 15) & 1) | ((opcode & 1) << 1);
+
+		if (id2 == 0b0010 && !((opcode >> 12) & 1) && !((opcode >> 4) & 1))
+		{
+			u8 operation = opcode >> 28;
+			u8 operation_minor = (opcode >> 13) & 3;
+
+			switch (operation)
+			{
+			case 0b0001:
+			{
+				if (operation_minor == 0b0011)
+				{
+					log(DEBUG, "Count leading zeros unimplemented.");
+				}
+				else
+				{
+					instruction = BRANCH_EXCHANGE;
+				}
+			}
+			break;
+
+			default:
+				log(ERROR, "Unknown miscellaneous operation");
+				return false;
+			}
+		}
+		else
+		{
+			log(ERROR, "Unknown 0b000 instruction.");
+			return false;
+		}
+	}
+	break;
+
 	case BRANCH_ID:
+	{
 		instruction = BRANCH;
+	}
+	break;
+
+	case DATA_PROCESSING:
+	{
+		u8 sub_opcode = (opcode >> 13) | ((opcode & 1) << 3);
+
+		switch (sub_opcode)
+		{
+		case MOVE_ID:
+		{
+			instruction = MOVE;
+		}
 		break;
+
+		default:
+			log(ERROR, "Unimplemented data processing instruction. (0x%X)", sub_opcode);
+		}
+	}
+	break;
 
 	default:
 		log(ERROR, "Unknown instruction: 0x%X", id3);
@@ -97,5 +158,44 @@ void CPU::branch()
 	}
 
 	PC = address;
+	jump = 0;
+}
+
+void CPU::move()
+{
+	bool update = (opcode >> 12) & 1;
+	u16 operand = opcode >> 24;
+	u8 SBZ = (opcode >> 20) & 0xF; // Should be zero
+	u8 Rd = (opcode >> 16) & 0xF;
+
+	if (!update && ((operand >> 8) & 1) && ((operand >> 11) & 1))
+	{
+		log(ERROR, "Extended MOV instruction!");
+	}
+
+	GPR[Rd] = operand & 0xFF;
+
+	if (update && Rd == 15)
+	{
+		log(ERROR, "MOV with S == 1 and Rd == 15");
+	}
+	else if (update)
+	{
+		log(ERROR, "MOV with S == 1");
+	}
+}
+
+void CPU::branch_exchange()
+{
+	log(DEBUG, "Branch exchange");
+	u8 Rm = (opcode >> 24) & 0xF;
+	set_T(GPR[Rm] & 1);
+
+	if (Rm == 15)
+	{
+		log(ERROR, "Register 15 specified for branch exchange");
+	}
+
+	PC = GPR[Rm] & 0xFFFFFFFE;
 	jump = 0;
 }

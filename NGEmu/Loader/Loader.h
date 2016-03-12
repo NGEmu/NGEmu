@@ -14,7 +14,7 @@ struct E32Image
 	u32 signature;
 	u32 cpu;
 	u32 code_checksum;
-	u32 format;
+	u32 data_checksum;
 	u8 major;
 	u8 minor;
 	u16 build;

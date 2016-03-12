@@ -5,17 +5,19 @@
 // Instructions
 enum : u8
 {
+	// Main opcode IDs
 	BRANCH_ID = 0b0101,
+	DATA_PROCESSING = 0b0001,
+	VARIOUS = 0b0000,
+
+	// Data-processing sub-instructions
+	MOVE_ID = 0b1101,
 
 	// Custom stuff
 	BRANCH = 0,
+	MOVE = 1,
+	BRANCH_EXCHANGE = 2,
 };
-
-union Register
-{
-	u32 reg;
-};
-
 class CPU
 {
 	friend class Debugger;
@@ -25,10 +27,10 @@ public:
 	void execute();
 
 private:
-	Register GPR[0xF] = {};
-	u32& LR = GPR[0xD].reg;
-	u32& SP = GPR[0xE].reg;
-	u32& PC = GPR[0xF].reg;
+	u32 GPR[0xF] = { 1};
+	u32& SP = GPR[0xD];
+	u32& LR = GPR[0xE];
+	u32& PC = GPR[0xF];
 	u32 CPSR = {};
 
 	Memory memory;
@@ -36,6 +38,7 @@ private:
 	u32 opcode;
 	u32 instruction;
 	u8 jump;
+	bool thumb;
 
 	void fetch();
 	bool decode();
@@ -43,6 +46,8 @@ private:
 
 	// Instructions
 	void branch();
+	void move();
+	void branch_exchange();
 
 	// Instruction pointer table
 	void (CPU::*instructions[64])();
@@ -50,69 +55,52 @@ private:
 	// CPSR functions
 	inline bool get_N()
 	{
-		return (CPSR >> 31) & 1;
+		return get_bit(CPSR, 31);
 	}
 
 	inline bool get_Z()
 	{
-		return (CPSR >> 30) & 1;
+		return get_bit(CPSR, 30);
 	}
 
 	inline bool get_C()
 	{
-		return (CPSR >> 29) & 1;
+		return get_bit(CPSR, 29);
 	}
 
 	inline bool get_V()
 	{
-		return (CPSR >> 28) & 1;
+		return get_bit(CPSR, 28);
+	}
+
+	inline bool get_T()
+	{
+		return get_bit(CPSR, 5);
 	}
 
 	inline void set_N(bool value)
 	{
-		if (value)
-		{
-			CPSR |= 1 << 31;
-		}
-		else
-		{
-			CPSR &= ~(1 << 31);
-		}
+		set_bit(CPSR, 31, value);
 	}
 
 	inline void set_Z(bool value)
 	{
-		if (value)
-		{
-			CPSR |= 1 << 30;
-		}
-		else
-		{
-			CPSR &= ~(1 << 30);
-		}
+		set_bit(CPSR, 30, value);
 	}
 
 	inline void set_C(bool value)
 	{
-		if (value)
-		{
-			CPSR |= 1 << 29;
-		}
-		else
-		{
-			CPSR &= ~(1 << 29);
-		}
+		set_bit(CPSR, 29, value);
 	}
 
 	inline void set_V(bool value)
 	{
-		if (value)
-		{
-			CPSR |= 1 << 28;
-		}
-		else
-		{
-			CPSR &= ~(1 << 28);
-		}
+		set_bit(CPSR, 28, value);
+	}
+
+	inline void set_T(bool value)
+	{
+		set_bit(CPSR, 5, value);
+		thumb = value;
 	}
 };
