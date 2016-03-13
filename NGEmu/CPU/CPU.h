@@ -6,12 +6,26 @@
 enum : u8
 {
 	// Main opcode IDs
-	BRANCH_ID = 0b0101,
-	DATA_PROCESSING = 0b0001,
-	VARIOUS = 0b0000,
+	VARIOUS         = 0b0000,
+	DATA_PROCESSING = 0b0010,
+	BRANCH_ID       = 0b1010,
 
 	// Data-processing sub-instructions
 	MOVE_ID = 0b1101,
+
+	// Various opcode sub-categories
+	MISCELLANEOUS_ID = 0b0010,
+
+	// Miscellaneous categories
+	MISCELLANEOUS_STATUS_REGISTER = 0b0000,
+	MISCELLANEOUS_BRANCH_ZEROS    = 0b0001,
+	MISCELLANEOUS_BRANCH_LINK     = 0b0011,
+	MISCELLANEOUS_DSP_ADD_SUB     = 0b0101,
+	MISCELLANEOUS_DSP_MULT        = 0b1000,
+
+	// Miscellaneous opcodes
+	MISCELLANEOUS_OTHER = 0b0001,
+	MISCELLANEOUS_ZEROS = 0b0011,
 
 	// Custom stuff
 	BRANCH = 0,
@@ -27,7 +41,7 @@ public:
 	void execute();
 
 private:
-	u32 GPR[0xF] = { 1};
+	u32 GPR[0xF] = {};
 	u32& SP = GPR[0xD];
 	u32& LR = GPR[0xE];
 	u32& PC = GPR[0xF];
@@ -40,8 +54,9 @@ private:
 	u8 jump;
 	bool thumb;
 
-	void fetch();
-	bool decode();
+	void fetch(u8 default_jump);
+	bool decode_ARM();
+	bool decode_Thumb();
 	void debug();
 
 	// Instructions

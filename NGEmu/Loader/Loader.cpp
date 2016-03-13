@@ -125,10 +125,17 @@ bool loader::parse(E32Image& image)
 	}
 
 	// TODO: Support relocations
-	// TODO: Is this check even proper? No idea.
+	// TODO: This check is not proper. Documentation is lacking.
 	if (image.fixed_address)
 	{
 		log(ERROR, "Non-fixed address executables aren't supported.");
+		return false;
+	}
+
+	// J-format with compression and V-format isn't supported
+	if (image.header_format != 0 && image.data_checksum != 0) // Data checksum == compression type on newer formats
+	{
+		log(ERROR, "Only basic header type is supported.");
 		return false;
 	}
 
@@ -176,6 +183,9 @@ bool loader::parse(E32Image& image)
 		log(ERROR, "UID checksum mismatch.");
 		return false;
 	}
+
+	// Don't include the header in the data
+	std::vector<decltype(image.data)::value_type>(image.data.begin() + image.code_offset, image.data.end()).swap(image.data);
 
 	return true;
 }

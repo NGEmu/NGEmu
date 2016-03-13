@@ -152,45 +152,47 @@ std::string Debugger::get_register_name(u8 reg)
 
 std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 {
-	u8 condition = (opcode & 0xFF) >> 4;
-	u8 id = (opcode & 0xF); // The full 4 bit ID of the instruction
-	u8 id3 = (opcode & 0xF) >> 1; // First 3 bits of the ID, to help with identification
+	u8 condition = (opcode >> 28) & 0xF;
+	u8 id = (opcode >> 24) & 0xF; // The full 4 bit ID of the instruction
+	u8 id3 = (opcode >> 24) & 0xE; // First 3 bits of the ID, to help with identification
 
 	if (condition == 0b1111)
 	{
-		return "0b1111 (report this)";
+		return "0b1111 condition";
 	}
 
 	switch (id3)
 	{
 	case VARIOUS:
 	{
-		u8 id2 = ((opcode >> 15) & 1) | ((opcode & 1) << 1);
-
-		if (id2 == 0b0010 && !((opcode >> 12) & 1) && !((opcode >> 4) & 1))
+		u8 id2 = (opcode >> 23) & 3;
+		bool update = (opcode >> 20) & 1;
+		
+		if (!update && id2 == MISCELLANEOUS_ID)
 		{
-			u8 operation = opcode >> 28;
-			u8 operation_minor = (opcode >> 13) & 3;
+			u8 id4 = (opcode >> 4) & 0xF;
+			u8 op = (opcode >> 21) & 3;
 
-			switch (operation)
+			if (id4 == MISCELLANEOUS_BRANCH_ZEROS)
 			{
-			case 0b0001:
-			{
-				if (operation_minor == 0b0011)
+				if (op == MISCELLANEOUS_OTHER) // Branch and exchange
 				{
-					return "CLZ ???";
+					u8 Rm = opcode & 0xF;
+					return format("BX %s", get_register_name(Rm));
 				}
 				else
 				{
-					u8 Rm = (opcode >> 24) & 0xF;
-					return format("BX %s", get_register_name(Rm));
+					return "Unknown misc other";
 				}
 			}
-			break;
-
-			default:
-				log(ERROR, "Unknown miscellaneous operation");
+			else
+			{
+				return "Unknown misc category";
 			}
+		}
+		else
+		{
+			return "Unknown various op";
 		}
 	}
 	break;
@@ -198,7 +200,7 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 	case BRANCH_ID:
 	{
 		bool link = id & 1;
-		u32 address = ((((s32)(opcode >> 8) << 8) >> 8) << 2) + PC + 8;
+		u32 address = (((s32)(opcode << 8) >> 8) << 2) + PC + 8;
 
 		if (link)
 		{
@@ -213,14 +215,14 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 	case DATA_PROCESSING:
 	{
-		u8 sub_opcode = (opcode >> 13) | ((opcode & 1) << 3);
+		u8 sub_opcode = (opcode >> 21) & 0xF;
 
 		switch (sub_opcode)
 		{
 		case MOVE_ID:
 		{
-			u8 Rd = (opcode >> 16) & 0xF;
-			u16 operand = opcode >> 24;
+			u8 Rd = (opcode >> 12) & 0xF;
+			u16 operand = opcode & 0xFFF;
 
 			return format("MOV %s, #%X", get_register_name(Rd), operand & 0xF);
 		}
@@ -311,7 +313,7 @@ void Debugger::display_debugger()
 	for (s32 i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
 	{
 		s32 clipper_i = i;
-		i *= 4;
+		i *= instruction_bytes;
 
 		screen_cursor = ImGui::GetCursorScreenPos();
 
@@ -329,7 +331,7 @@ void Debugger::display_debugger()
 
 		ImGui::NextColumn();
 		ImGui::Text("0x%X", i); ImGui::NextColumn();
-		ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 3));
+		ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i + 3), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i));
 		ImGui::NextColumn();
 
 		if (emulator.cpu->thumb)
