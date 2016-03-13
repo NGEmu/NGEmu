@@ -5,7 +5,7 @@ CPU::CPU()
 {
 	breakpoint = -1;
 
-	// Copy the ROM to memory (don't copy the header)
+	// Copy the ROM to memory
 	for (u64 i = 0; i < emulator.rom.data.size(); i++)
 	{
 		memory.write8(static_cast<u32>(i), emulator.rom.data[i]);
@@ -111,6 +111,7 @@ bool CPU::decode_ARM()
 	return true;
 }
 
+// Decode the instruction
 bool CPU::decode_Thumb()
 {
 	log(DEBUG, "Decoding Thumb");

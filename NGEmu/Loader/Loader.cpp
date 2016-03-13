@@ -133,7 +133,7 @@ bool loader::parse(E32Image& image)
 	}
 
 	// J-format with compression and V-format isn't supported
-	if (image.header_format != 0 && image.data_checksum != 0) // Data checksum == compression type on newer formats
+	if (image.header_format != 0 && image.data_checksum != 0)
 	{
 		log(ERROR, "Only basic header type is supported.");
 		return false;
@@ -157,6 +157,13 @@ bool loader::parse(E32Image& image)
 	if (image.abi != 0)
 	{
 		log(ERROR, "EABI ABI is unsupported.");
+		return false;
+	}
+
+	// TODO: Data relocation support
+	if (image.data_relocation_offset != 0)
+	{
+		log(ERROR, "Data relocation not supported");
 		return false;
 	}
 
@@ -184,8 +191,83 @@ bool loader::parse(E32Image& image)
 		return false;
 	}
 
+	// Calculate import count
+	u32* imports = reinterpret_cast<u32*>(image.data.data() + image.code_offset + image.text_size);
+	image.import_count = 0;
+
+	while (*imports++)
+	{
+		image.import_count++;
+	}
+	
+	if (image.dll_count == 0)
+	{
+		log(ERROR, "DLL count is 0, please report this. (%d)", image.import_count);
+	}
+
+	// Perform relocations
+	if (image.code_relocation_offset != 0)
+	{
+		relocate(image, image.data.data() + image.code_relocation_offset, image.data.data() + image.code_offset, image.code_base_address);
+	}
+
 	// Don't include the header in the data
 	std::vector<decltype(image.data)::value_type>(image.data.begin() + image.code_offset, image.data.end()).swap(image.data);
 
 	return true;
+}
+
+// Relocates a section. Data is the relocation information and destination the relocation destination. Delta is the linked address - actual address.
+void loader::relocate(E32Image& image, u8* data, u8* destination, u32 delta)
+{
+	data += 8;
+	s32 relocation_count = *(s32*)(data - 4);
+	u32 page = 0;
+	s32 size = 0;
+	u32 code_start = image.code_offset;
+	u32 code_end = code_start + image.code_size;
+	u32 iat_start = code_start + image.text_size;
+	u32 iat_end = iat_start + (image.import_count * sizeof(u32));
+
+	while (relocation_count > 0)
+	{
+		if (size > 0)
+		{
+			u16 offset = *(u16*)data;
+			data += 2;
+
+			if (offset != 0)
+			{
+				u32 virtual_address = page + (offset & 0x0FFF);
+				u32* data_pointer = reinterpret_cast<u32*>(destination + virtual_address);
+				u32 data = *data_pointer;
+
+				if (data >= iat_start && data < iat_end)
+				{
+					log(ERROR, "IAT relocation (TODO)");
+					*data_pointer = data;
+				}
+				else if (data >= code_start && data < code_end)
+				{
+					log(ERROR, "Code relocation (TODO)");
+					*data_pointer = data;
+				}
+				else
+				{
+					*data_pointer = data - delta;
+				}
+
+				relocation_count--;
+			}
+
+			size -= 2;
+		}
+		else
+		{
+			page = *(u32*)data;
+			size = *(u32*)(data + 4);
+			data += 8;
+			size -= 8;
+		}
+	}
 }

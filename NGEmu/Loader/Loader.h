@@ -5,6 +5,7 @@ struct E32Image
 	// Emulator specific stuff
 	std::vector<u8> data; // Vector of bytes of the ROM
 	u32 entry_point;      // Entry point address
+	u32 import_count;
 
 	// Header
 	u32 uid1;
@@ -40,15 +41,6 @@ struct E32Image
 	u32 data_relocation_offset;
 	u32 priority;
 
-	// Only for V-formatted headers
-	u32 uncompressed_size;
-	// TODO: Security information (0x10)
-	u32 exception_descriptor_offset; // Bit 0 is clear if not used
-	u32 unused;
-	u32 bitmap_holes_size;
-	u32 bitmap_holes_format;
-	// ... Bitmap describing holes in export tables (variable length)
-
 	// Flags
 	bool executable_type;  // false = executable, true = DLL
 	bool call_entry_point; // false = call, true = don't call
@@ -67,4 +59,5 @@ namespace loader
 	// For checksums
 	u16 crc16_ccitt(u8 (&values)[6]);
 	void u8_from_32(u8 output[4], u32 value);
+	void relocate(E32Image& image, u8* data, u8* destination, u32 delta);
 }
