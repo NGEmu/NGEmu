@@ -4,6 +4,7 @@
 CPU::CPU()
 {
 	breakpoint = -1;
+	PC = emulator.rom.entry_point;
 
 	// Copy the ROM to memory
 	for (u64 i = 0; i < emulator.rom.data.size(); i++)

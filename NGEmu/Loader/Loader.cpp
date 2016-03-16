@@ -98,11 +98,11 @@ bool loader::parse(E32Image& image)
 	image.priority = data32[30];
 
 	// Get the flags
-	image.executable_type = (image.flags >> 0) & 0x1;
-	image.call_entry_point = (image.flags >> 1) & 0x1;
-	image.fixed_address = (image.flags >> 2) & 0x1;
+	image.executable_type = (image.flags >> 0) & 1;
+	image.call_entry_point = (image.flags >> 1) & 1;
+	image.fixed_address = (image.flags >> 2) & 1;
 	image.abi = (image.flags >> 3) & 0x3;
-	image.entry_point_type = (image.flags >> 5) & 0x7;
+	image.entry_point_type = (image.flags >> 5) & 7;
 	image.header_format = (image.flags >> 24) & 0xF;
 	image.import_format = (image.flags >> 28) & 0xF;
 
@@ -110,29 +110,14 @@ bool loader::parse(E32Image& image)
 	image.entry_point = image.code_offset;
 
 	// Check the validity and support for stuff
-	// TODO: DLL loading support
-	if (!image.executable_type)
-	{
-		log(ERROR, "DLLs aren't supported");
-		return false;
-	}
-
-	// TODO: What if there's no entry point?
-	if (!image.call_entry_point)
-	{
-		log(ERROR, "Entry point call unspecified. What do we do?");
-		return false;
-	}
-
-	// TODO: Support relocations
-	// TODO: This check is not proper. Documentation is lacking.
+	// TODO: Non-fixed address executables support
 	if (image.fixed_address)
 	{
 		log(ERROR, "Non-fixed address executables aren't supported.");
 		return false;
 	}
 
-	// J-format with compression and V-format isn't supported
+	// J-format with compression and V-format isn't supported (some newer games have Symbian OS 9 headers)
 	if (image.header_format != 0 && image.data_checksum != 0)
 	{
 		log(ERROR, "Only basic header type is supported.");
@@ -203,6 +188,7 @@ bool loader::parse(E32Image& image)
 	if (image.dll_count == 0)
 	{
 		log(ERROR, "DLL count is 0, please report this. (%d)", image.import_count);
+		return false;
 	}
 
 	// Perform relocations
@@ -210,6 +196,16 @@ bool loader::parse(E32Image& image)
 	{
 		relocate(image, image.data.data() + image.code_relocation_offset, image.data.data() + image.code_offset, image.code_base_address);
 	}
+
+	// The number of exports should always be at least 1
+	if (image.export_count != 1)
+	{
+		log(ERROR, "Export count is not 1. Report this. (%d)", image.export_count);
+		return false;
+	}
+
+	// There is always one exported function called NewApplication(), which starts the execution of the application. It's called through apprun.exe on pre-Symbian OS 9.
+	image.entry_point = data32[image.export_offset / 4];
 
 	// Don't include the header in the data
 	std::vector<decltype(image.data)::value_type>(image.data.begin() + image.code_offset, image.data.end()).swap(image.data);
@@ -229,6 +225,7 @@ void loader::relocate(E32Image& image, u8* data, u8* destination, u32 delta)
 	u32 iat_start = code_start + image.text_size;
 	u32 iat_end = iat_start + (image.import_count * sizeof(u32));
 
+	// TODO: Support more types of relocations
 	while (relocation_count > 0)
 	{
 		if (size > 0)
