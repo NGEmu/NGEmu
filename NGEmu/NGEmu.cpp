@@ -6,7 +6,7 @@ Emulator emulator;
 s32 main(s32 argc, char* argv[])
 {
 	std::string log_name = "NGEmu.log";
-	std::string rom = "Tombraider.app"; // If a ROM isn't specified on command line, then execute the ROM specified here
+	std::string rom = "Tombraider.app"; // If a ROM isn't specified on command line, then execute the ROM specified here (for development)
 
 	if (argc >= 2)
 	{
@@ -33,11 +33,12 @@ Emulator::Emulator()
 {
 	running = true;
 	emulating = true;
-	debugger.reset(new Debugger());
 }
 
 bool Emulator::initialize(std::string path)
 {
+	debugger.reset(new Debugger());
+
 	if (!debugger->initialize())
 	{
 		return false;

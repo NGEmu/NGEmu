@@ -26,6 +26,7 @@ Vulkan/Vulkan-build
 Vulkan/glslang-build
 build/
 build_common/
+build_renderers/
 
 # Visual Studio 2015 cache/options directory
 .vs/

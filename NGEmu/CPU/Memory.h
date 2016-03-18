@@ -54,6 +54,7 @@ inline void set_bit(u32& value, u8 bit, bool state)
 		clear_bit(value, bit);
 	}
 }
+
 // Carry and overflow functions
 //inline s32 carry_from(u32 a, u32 b)
 //{

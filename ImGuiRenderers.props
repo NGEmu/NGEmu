@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- Place this file one level before the ImGuiVulkanRenderer folder.
+<!-- Place this file one level before the ImGuiRenderers folder.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
@@ -7,7 +7,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <!-- Add the directory locations for imgui headers and vulkan headers below
-	       Note that the root for the path is /ImGuiVulkanRenderer/Renderer/
+	       Note that the root for the path is /ImGuiRenderers/ImGuiRenderers/
 	  -->
       <AdditionalIncludeDirectories>../../Vulkan/Vulkan-LoaderAndValidationLayers/include/;../../imgui/</AdditionalIncludeDirectories>
     </ClCompile>

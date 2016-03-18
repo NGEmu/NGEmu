@@ -65,35 +65,8 @@ s64 Debugger::window_callback(HWND& handle, u32& msg, u64& param1, s64& param2)
 
 Debugger::Debugger()
 {
-	renderer.reset(new ImGuiVulkanRenderer());
 	window.reset(new Window(std::bind(&Debugger::window_callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4)));
 	opened = false;
-
-	// Set up the ImGui keymap
-	ImGuiIO& io = ImGui::GetIO();
-
-#ifdef _WIN32
-	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
-	io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
-	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
-	io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
-	io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
-	io.KeyMap[ImGuiKey_PageUp] = VK_PRIOR;
-	io.KeyMap[ImGuiKey_PageDown] = VK_NEXT;
-	io.KeyMap[ImGuiKey_Home] = VK_HOME;
-	io.KeyMap[ImGuiKey_End] = VK_END;
-	io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
-	io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
-	io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
-	io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
-#endif
-
-	io.KeyMap[ImGuiKey_A] = 'A';
-	io.KeyMap[ImGuiKey_C] = 'C';
-	io.KeyMap[ImGuiKey_V] = 'V';
-	io.KeyMap[ImGuiKey_X] = 'X';
-	io.KeyMap[ImGuiKey_Y] = 'Y';
-	io.KeyMap[ImGuiKey_Z] = 'Z';
 }
 
 Debugger::~Debugger()
@@ -103,6 +76,8 @@ Debugger::~Debugger()
 
 bool Debugger::initialize()
 {
+	renderer.reset(new ImGuiVulkanRenderer());
+
 	if (!window->create_window("Debugger", "Debugger", 1280, 830, WINDOW, NORMAL))
 	{
 		return false;
@@ -115,13 +90,13 @@ bool Debugger::initialize()
 	clear_value.color.float32[1] = 0.075f;
 	clear_value.color.float32[2] = 0.025f;
 
-	ImGuiVulkanOptions options;
-	options.clear_value = clear_value;
-	options.device_number = 0;
-	options.validation_layers = false;
-	options.use_precompiled_shaders = true;
+	ImGuiVulkanOptions vulkan_options;
+	vulkan_options.clear_value = clear_value;
+	vulkan_options.device_number = 0;
+	vulkan_options.validation_layers = false;
+	vulkan_options.use_precompiled_shaders = true;
 
-	if (!renderer->initialize(window->get_handle(), window->get_instance(), options))
+	if (!renderer->initialize(window->get_handle(), window->get_instance(), &vulkan_options))
 	{
 		log(ERROR, "ImGui Vulkan renderer failed to initialize.");
 		return false;
