@@ -19,6 +19,7 @@ private:
 
 	void display_debugger();
 	std::string get_register_name(u8 reg);
+	std::string parse_register_list(u16 reg_list);
 	std::string parse_instruction(u32 opcode, u32 PC);
 	std::string parse_thumb_instruction(u16 opcode, u32 PC);
 

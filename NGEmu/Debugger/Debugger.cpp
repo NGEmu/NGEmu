@@ -125,6 +125,26 @@ std::string Debugger::get_register_name(u8 reg)
 	return format("R%d", reg);
 }
 
+std::string Debugger::parse_register_list(u16 reg_list)
+{
+	std::string list;
+
+	for (u8 i = 0; i < 0xF; i++)
+	{
+		if ((reg_list >> i) & 1)
+		{
+			if (!list.empty())
+			{
+				list += ",";
+			}
+
+			list += get_register_name(i);
+		}
+	}
+
+	return list;
+}
+
 std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 {
 	u8 condition = (opcode >> 28) & 0xF;
@@ -172,6 +192,81 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 	}
 	break;
 
+	case DATA_PROCESSING:
+	{
+		u8 sub_opcode = (opcode >> 21) & 0xF;
+
+		if (sub_opcode == MOVE_ID)
+		{
+			u8 Rd = (opcode >> 12) & 0xF;
+			u8 rotate = ((opcode >> 8) & 0xF) * 2;
+			u16 immediate = rotate_right((u16)(opcode & 0xFF), rotate);
+			return format("MOV %s, #%X", get_register_name(Rd), immediate);
+		}
+		else if (sub_opcode == SUBTRACT_ID)
+		{
+			return "SUB";
+		}
+
+		return "Unknown data processing";
+	}
+	break;
+
+	case MULTIPLE_REG:
+	{
+		u16 register_list = opcode & 0xFFFF;
+		u8 mode = (opcode >> 23) & 3;
+		bool W = (opcode >> 21) & 1;
+		bool L = (opcode >> 20) & 1;
+		u8 Rn = (opcode >> 16) & 0xF;
+		bool SP = (Rn == 0xD);
+		std::string instruction;
+
+		if (L)
+		{
+			instruction += "LDM";
+		}
+		else
+		{
+			instruction += "STM";
+		}
+
+		if (mode == DECREMENT_BEFORE)
+		{
+			if (SP)
+			{
+				if (L)
+				{
+					return "Unknown SP load multiple";
+				}
+				else
+				{
+					instruction += "FD";
+				}
+			}
+			else
+			{
+				instruction += "DB";
+			}
+		}
+		else
+		{
+			return "Unkown adressing mode";
+		}
+
+		instruction += format(" %s", get_register_name(Rn));
+
+		if (W)
+		{
+			instruction += "!";
+		}
+
+		instruction += format(", {%s}", parse_register_list(register_list));
+
+		return instruction;
+	}
+	break;
+
 	case BRANCH_ID:
 	{
 		bool link = id & 1;
@@ -187,24 +282,6 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 		}
 	}
 	break;
-
-	case DATA_PROCESSING:
-	{
-		u8 sub_opcode = (opcode >> 21) & 0xF;
-
-		switch (sub_opcode)
-		{
-		case MOVE_ID:
-		{
-			u8 Rd = (opcode >> 12) & 0xF;
-			u16 operand = opcode & 0xFFF;
-
-			return format("MOV %s, #%X", get_register_name(Rd), operand & 0xF);
-		}
-		break;
-		}
-	}
-	break;
 	}
 
 	return "Unknown";
@@ -212,7 +289,7 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 std::string Debugger::parse_thumb_instruction(u16 opcode, u32 PC)
 {
-	return "Unknown";
+	return "Unknown thumb instruction";
 }
 
 void Debugger::display_debugger()
@@ -263,8 +340,8 @@ void Debugger::display_debugger()
 	
 	ImGui::Columns(4, "Disassembly");
 	ImGui::SetColumnOffset(1, 26);
-	ImGui::SetColumnOffset(2, 96);
-	ImGui::SetColumnOffset(3, 188);
+	ImGui::SetColumnOffset(2, 98);
+	ImGui::SetColumnOffset(3, 190);
 	ImGui::Text(""); ImGui::NextColumn(); // To indicate a breakpoint
 	ImGui::Text("Address"); ImGui::NextColumn();
 	ImGui::Text("Bytes"); ImGui::NextColumn();
@@ -273,7 +350,7 @@ void Debugger::display_debugger()
 
 	u8 instruction_bytes = emulator.cpu->thumb ? 2 : 4;
 
-	ImGuiListClipper clipper(0x380000 / instruction_bytes, ImGui::GetTextLineHeight()); // Bytes are grouped by four (the alignment for instructions)
+	ImGuiListClipper clipper(0x1000000 / instruction_bytes, ImGui::GetTextLineHeight()); // Bytes are grouped by four (the alignment for instructions)
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	ImColor breakpoint_fill = ImColor(ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
 	ImColor breakpoint_border = ImColor(ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -326,6 +403,7 @@ void Debugger::display_debugger()
 	clipper.End();
 	ImGui::EndChild();
 	ImGui::SameLine();
+	ImGui::BeginGroup();
 	ImGui::BeginChild("Registers", ImVec2(200, 300), true);
 
 	for (u8 i = 0; i < 13; i++)
@@ -339,19 +417,45 @@ void Debugger::display_debugger()
 	ImGui::Text("CPSR: 0x%X", emulator.cpu->CPSR);
 
 	ImGui::EndChild();
+	ImGui::BeginChild("Stack", ImVec2(200, 200), true);
+
+	ImGui::Columns(2, "Stack");
+	ImGui::SetColumnOffset(1, 72);
+	ImGui::Text("Address"); ImGui::NextColumn();
+	ImGui::Text("Bytes"); ImGui::NextColumn();
+	ImGui::Separator();
+
+	ImGuiListClipper stack_clipper((0x1000000 - emulator.cpu->SP) / instruction_bytes, ImGui::GetTextLineHeight()); // Bytes are grouped by four (the alignment for instructions)
+
+	for (s32 i = stack_clipper.DisplayStart; i < stack_clipper.DisplayEnd; i++)
+	{
+		s32 clipper_i = i;
+		i *= 4;
+		i = 0xFFFFFC - i;
+
+		ImGui::Text("0x%X", i); ImGui::NextColumn();
+		ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i + 3), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i));
+		ImGui::NextColumn();
+
+		i = clipper_i;
+	}
+
+	stack_clipper.End();
+
+	ImGui::EndChild();
+	ImGui::EndGroup();
 	ImGui::End();
 }
 
 void Debugger::render()
 {
-	renderer->new_frame();
-
 	// Sometimes when the main loop is being killed, this still gets called, so we need to exit if the loop was killed
 	if (!opened)
 	{
 		return;
 	}
 
+	renderer->new_frame();
 	display_debugger();
 	ImGui::Render();
 }

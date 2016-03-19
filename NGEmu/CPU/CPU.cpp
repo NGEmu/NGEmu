@@ -5,6 +5,7 @@ CPU::CPU()
 {
 	breakpoint = -1;
 	PC = emulator.rom.entry_point;
+	SP = 0x1000000; // This might not be correct
 
 	// Copy the ROM to memory
 	for (u64 i = 0; i < emulator.rom.data.size(); i++)
@@ -13,8 +14,9 @@ CPU::CPU()
 	}
 
 	instructions[BRANCH]          = &CPU::branch;
-	instructions[MOVE]            = &CPU::move;
 	instructions[BRANCH_EXCHANGE] = &CPU::branch_exchange;
+	instructions[MOVE]            = &CPU::move;
+	instructions[MULTIPLE]        = &CPU::multiple;
 }
 
 // Fetch the opcode
@@ -79,12 +81,6 @@ bool CPU::decode_ARM()
 	}
 	break;
 
-	case BRANCH_ID:
-	{
-		instruction = BRANCH;
-	}
-	break;
-
 	case DATA_PROCESSING:
 	{
 		u8 sub_opcode = (opcode >> 21) & 0xF;
@@ -101,6 +97,18 @@ bool CPU::decode_ARM()
 			log(ERROR, "Unimplemented data processing instruction. (0x%X)", sub_opcode);
 			return false;
 		}
+	}
+	break;
+
+	case MULTIPLE_REG:
+	{
+		instruction = MULTIPLE;
+	}
+	break;
+
+	case BRANCH_ID:
+	{
+		instruction = BRANCH;
 	}
 	break;
 
@@ -172,34 +180,11 @@ void CPU::branch()
 	if (link)
 	{
 		log(ERROR, "BRANCH with link is unsupported.");
+		return;
 	}
 
 	PC = address;
 	jump = 0;
-}
-
-void CPU::move()
-{
-	bool update = (opcode >> 20) & 1;
-	u16 operand = opcode & 0xFFF;
-	u8 SBZ = (opcode >> 16) & 0xF; // Should be zero
-	u8 Rd = (opcode >> 12) & 0xF;
-
-	if (!((update >> 25) & 1) && ((operand >> 7) & 1) && ((operand >> 4) & 1))
-	{
-		log(ERROR, "Extended MOV instruction!");
-	}
-
-	GPR[Rd] = operand & 0xFF;
-
-	if (update && Rd == 15)
-	{
-		log(ERROR, "MOV with S == 1 and Rd == 15");
-	}
-	else if (update)
-	{
-		log(ERROR, "MOV with S == 1");
-	}
 }
 
 void CPU::branch_exchange()
@@ -219,8 +204,103 @@ void CPU::branch_exchange()
 	if (Rm == 15)
 	{
 		log(ERROR, "Register 15 specified for branch exchange");
+		return;
 	}
 
 	PC = GPR[Rm] & 0xFFFFFFFE;
 	jump = 0;
+}
+
+void CPU::move()
+{
+	bool update = (opcode >> 20) & 1;
+	u16 operand = opcode & 0xFFF;
+	u8 SBZ = (opcode >> 16) & 0xF; // Should be zero
+	u8 Rd = (opcode >> 12) & 0xF;
+	u8 rotate = ((opcode >> 8) & 0xF) * 2;
+	u16 immediate = rotate_right((u16)(opcode & 0xFF), rotate);
+
+	if (!((update >> 25) & 1) && ((operand >> 7) & 1) && ((operand >> 4) & 1))
+	{
+		log(ERROR, "Extended MOV instruction!");
+		return;
+	}
+
+	if (SBZ != 0)
+	{
+		log(ERROR, "MOV SBZ is not zero!");
+	}
+
+	GPR[Rd] = immediate;
+
+	if (update && Rd == 15)
+	{
+		log(ERROR, "MOV with S == 1 and Rd == 15");
+	}
+	else if (update)
+	{
+		log(ERROR, "MOV with S == 1");
+	}
+}
+
+void CPU::multiple()
+{
+	u8 mode = (opcode >> 23) & 3;
+	bool S = (opcode >> 22) & 1;
+	bool W = (opcode >> 21) & 1;
+	bool L = (opcode >> 20) & 1;
+	u8 Rn = (opcode >> 16) & 0xF;
+	u16 register_list = opcode & 0xFFFF;
+
+	if (L)
+	{
+		log(ERROR, "Multiple load unsupported");
+		return;
+	}
+
+	if (S)
+	{
+		log(ERROR, "Multiple update unsupported");
+		return;
+	}
+
+	u8 registers = 0;
+
+	for (u8 i = 0; i < 0xF; i++)
+	{
+		if ((register_list >> i) & 1)
+		{
+			registers++;
+		}
+	}
+
+	u32 address = GPR[Rn];
+
+	if (mode == DECREMENT_BEFORE)
+	{
+		address -= registers * 4;
+	}
+	else
+	{
+		log(ERROR, "Unsupported multiple addressing mode");
+		return;
+	}
+
+	for (u8 i = 0; i < 0xF; i++)
+	{
+		if ((register_list >> i) & 1)
+		{
+			memory.write32(address, GPR[i]);
+			address += 4;
+		}
+	}
+
+	if (W)
+	{
+		GPR[Rn] -= registers * 4;
+	}
+	else
+	{
+		log(ERROR, "Multiple base register decrementation not supported");
+	}
 }

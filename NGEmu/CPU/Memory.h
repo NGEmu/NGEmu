@@ -18,13 +18,25 @@ public:
 		return (read16(address + 2) << 16) | read16(address);
 	}
 
-	void write8(u32 address, u8 data)
+	inline void write8(u32 address, u8 value)
 	{
-		memory[address] = data;
+		memory[address] = value;
+	}
+
+	inline void write16(u32 address, u16 value)
+	{
+		write8(address + 1, value >> 8);
+		write8(address, value & 0xFF);
+	}
+
+	inline void write32(u32 address, u32 value)
+	{
+		write16(address + 2, value >> 16);
+		write16(address, value & 0xFFFF);
 	}
 
 private:
-	u8 memory[0x380000] = {};
+	u8 memory[0x1000000] = {};
 };
 
 // Bit manipulation functions
@@ -53,6 +65,55 @@ inline void set_bit(u32& value, u8 bit, bool state)
 	{
 		clear_bit(value, bit);
 	}
+}
+
+template<typename T>
+inline T reverse(T n, u64 b = std::numeric_limits<T>::digits)
+{
+	T reversed = 0;
+
+	for (u64 i = 0; i < b; ++i, n >>= 1)
+	{
+		reversed = (reversed >> 1) | (n & 0x01);
+	}
+
+	return reversed;
+}
+
+inline u8 rotate_right(u8 value, u8 shift)
+{
+#ifdef _MSC_VER
+	return _rotr8(value, shift);
+#else
+	#error "Rotate right 8 unimplemented"
+#endif
+}
+
+inline u16 rotate_right(u16 value, u8 shift)
+{
+#ifdef _MSC_VER
+	return _rotr16(value, shift);
+#else
+	#error "Rotate right 16 unimplemented"
+#endif
+}
+
+inline u8 rotate_left(u8 value, u8 shift)
+{
+#ifdef _MSC_VER
+	return _rotl8(value, shift);
+#else
+	#error "Rotate left 8 unimplemented"
+#endif
+}
+
+inline u16 rotate_left(u16 value, u8 shift)
+{
+#ifdef _MSC_VER
+	return _rotl16(value, shift);
+#else
+	#error "Rotate left 16 unimplemented"
+#endif
 }
 
 // Carry and overflow functions

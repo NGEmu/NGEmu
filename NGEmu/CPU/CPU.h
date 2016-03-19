@@ -8,10 +8,12 @@ enum : u8
 	// Main opcode IDs
 	VARIOUS         = 0b0000,
 	DATA_PROCESSING = 0b0010,
+	MULTIPLE_REG    = 0b1000,
 	BRANCH_ID       = 0b1010,
 
 	// Data-processing sub-instructions
-	MOVE_ID = 0b1101,
+	SUBTRACT_ID = 0b0010,
+	MOVE_ID     = 0b1101,
 
 	// Various opcode sub-categories
 	MISCELLANEOUS_ID = 0b0010,
@@ -27,10 +29,18 @@ enum : u8
 	MISCELLANEOUS_OTHER = 0b0001,
 	MISCELLANEOUS_ZEROS = 0b0011,
 
-	// Custom stuff
-	BRANCH = 0,
-	MOVE = 1,
-	BRANCH_EXCHANGE = 2,
+	// Multiple register adressing modes
+	DECREMENT_AFTER  = 0b0000,
+	INCREMENT_AFTER  = 0b0001,
+	DECREMENT_BEFORE = 0b0010,
+	INCREMENT_BEFORE = 0b0011,
+
+	// Instruction table IDs
+	BRANCH          = 0,
+	BRANCH_EXCHANGE = 1,
+	MOVE            = 2,
+	MULTIPLE        = 3,
+	SUBTRACT        = 4,
 };
 class CPU
 {
@@ -61,8 +71,10 @@ private:
 
 	// Instructions
 	void branch();
-	void move();
 	void branch_exchange();
+	void move();
+	void multiple();
+	void subtract();
 
 	// Instruction pointer table
 	void (CPU::*instructions[64])();
