@@ -1,6 +1,14 @@
 #include "stdafx.h"
 #include "CPU.h"
 
+// Helper functions
+u16 parse_operand(u16 operand)
+{
+	u8 rotate = (operand >> 8) * 2;
+	u16 immediate = rotate_right((u16)(operand & 0xFF), rotate);
+	return immediate;
+}
+
 CPU::CPU()
 {
 	breakpoint = -1;
@@ -13,10 +21,13 @@ CPU::CPU()
 		memory.write8(static_cast<u32>(i), emulator.rom.data[i]);
 	}
 
-	instructions[BRANCH]          = &CPU::branch;
-	instructions[BRANCH_EXCHANGE] = &CPU::branch_exchange;
-	instructions[MOVE]            = &CPU::move;
-	instructions[MULTIPLE]        = &CPU::multiple;
+	instructions[BRANCH]           = &CPU::branch;
+	instructions[BRANCH_EXCHANGE]  = &CPU::branch_exchange;
+	instructions[MOVE]             = &CPU::move;
+	instructions[MULTIPLE]         = &CPU::multiple;
+	instructions[SUBTRACT]         = &CPU::subtract;
+	instructions[ADD]              = &CPU::add;
+	instructions[IMMEDIATE_OFFSET] = &CPU::immediate_offset;
 }
 
 // Fetch the opcode
@@ -87,6 +98,18 @@ bool CPU::decode_ARM()
 
 		switch (sub_opcode)
 		{
+		case SUBTRACT_ID:
+		{
+			instruction = SUBTRACT;
+		}
+		break;
+
+		case ADD_ID:
+		{
+			instruction = ADD;
+		}
+		break;
+
 		case MOVE_ID:
 		{
 			instruction = MOVE;
@@ -97,6 +120,12 @@ bool CPU::decode_ARM()
 			log(ERROR, "Unimplemented data processing instruction. (0x%X)", sub_opcode);
 			return false;
 		}
+	}
+	break;
+
+	case IMMEDIATE_OFFSET_ID:
+	{
+		instruction = IMMEDIATE_OFFSET;
 	}
 	break;
 
@@ -179,8 +208,7 @@ void CPU::branch()
 
 	if (link)
 	{
-		log(ERROR, "BRANCH with link is unsupported.");
-		return;
+		LR = PC + 4;
 	}
 
 	PC = address;
@@ -189,17 +217,8 @@ void CPU::branch()
 
 void CPU::branch_exchange()
 {
-	u8 Rm = (opcode >> 24) & 0xF;
+	u8 Rm = opcode & 0xF;
 	set_T(GPR[Rm] & 1);
-
-	if (thumb)
-	{
-		log(DEBUG, "Switched to Thumb");
-	}
-	else
-	{
-		log(DEBUG, "Still on ARM mode");
-	}
 
 	if (Rm == 15)
 	{
@@ -214,11 +233,9 @@ void CPU::branch_exchange()
 void CPU::move()
 {
 	bool update = (opcode >> 20) & 1;
-	u16 operand = opcode & 0xFFF;
 	u8 SBZ = (opcode >> 16) & 0xF; // Should be zero
 	u8 Rd = (opcode >> 12) & 0xF;
-	u8 rotate = ((opcode >> 8) & 0xF) * 2;
-	u16 immediate = rotate_right((u16)(opcode & 0xFF), rotate);
+	u16 operand = opcode & 0xFFF;
 
 	if (!((update >> 25) & 1) && ((operand >> 7) & 1) && ((operand >> 4) & 1))
 	{
@@ -231,7 +248,7 @@ void CPU::move()
 		log(ERROR, "MOV SBZ is not zero!");
 	}
 
-	GPR[Rd] = immediate;
+	GPR[Rd] = parse_operand(operand);
 
 	if (update && Rd == 15)
 	{
@@ -302,5 +319,89 @@ void CPU::multiple()
 	else
 	{
 		log(ERROR, "Multiple base register decrementation not supported");
+	}
+}
+
+void CPU::subtract()
+{
+	bool update = (opcode >> 20) & 1;
+	u8 Rn = (opcode >> 16) & 0xF;
+	u8 Rd = (opcode >> 12) & 0xF;
+	
+	GPR[Rd] = GPR[Rn] - parse_operand(opcode & 0xFFF);
+
+	if (update && Rd == 15)
+	{
+		log(ERROR, "MOV with S == 1 and Rd == 15");
+	}
+	else if (update)
+	{
+		log(ERROR, "MOV with S == 1");
+	}
+}
+
+void CPU::add()
+{
+	bool update = (opcode >> 20) & 1;
+	u8 Rn = (opcode >> 16) & 0xF;
+	u8 Rd = (opcode >> 12) & 0xF;
+
+	GPR[Rd] = GPR[Rn] + parse_operand(opcode & 0xFFF);
+
+	if (update && Rd == 15)
+	{
+		log(ERROR, "MOV with S == 1 and Rd == 15");
+	}
+	else if (update)
+	{
+		log(ERROR, "MOV with S == 1");
+	}
+}
+
+void CPU::immediate_offset()
+{
+	bool P = (opcode >> 24) & 1;
+	bool U = (opcode >> 23) & 1;
+	bool B = (opcode >> 22) & 1;
+	bool W = (opcode >> 21) & 1;
+	bool L = (opcode >> 20) & 1;
+	u8 Rn = (opcode >> 16) & 0xF;
+	u8 Rd = (opcode >> 12) & 0xF;
+	u16 offset = opcode & 0xFFF;
+
+	if (!L)
+	{
+		log(ERROR, "STR unsupported");
+		return;
+	}
+
+	if (B)
+	{
+		log(ERROR, "LDRB/STRB unsupported");
+		return;
+	}
+
+	u32 address = GPR[Rn];
+
+	// Check for PC
+	if (Rn == 0xF)
+	{
+		address += 8;
+	}
+
+	if (U)
+	{
+		address += offset;
+	}
+	else
+	{
+		address -= offset;
+	}
+
+	GPR[Rd] = memory.read32(address);
+
+	if (P && W)
+	{
+		GPR[Rn] = address;
 	}
 }

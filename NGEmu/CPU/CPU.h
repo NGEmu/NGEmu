@@ -2,17 +2,22 @@
 
 #include "Memory.h"
 
+// Some helper functions
+u16 parse_operand(u16 operand);
+
 // Instructions
 enum : u8
 {
 	// Main opcode IDs
-	VARIOUS         = 0b0000,
-	DATA_PROCESSING = 0b0010,
-	MULTIPLE_REG    = 0b1000,
-	BRANCH_ID       = 0b1010,
+	VARIOUS             = 0b0000,
+	DATA_PROCESSING     = 0b0010,
+	IMMEDIATE_OFFSET_ID = 0b0100,
+	MULTIPLE_REG        = 0b1000,
+	BRANCH_ID           = 0b1010,
 
 	// Data-processing sub-instructions
 	SUBTRACT_ID = 0b0010,
+	ADD_ID      = 0b0100,
 	MOVE_ID     = 0b1101,
 
 	// Various opcode sub-categories
@@ -36,11 +41,13 @@ enum : u8
 	INCREMENT_BEFORE = 0b0011,
 
 	// Instruction table IDs
-	BRANCH          = 0,
-	BRANCH_EXCHANGE = 1,
-	MOVE            = 2,
-	MULTIPLE        = 3,
-	SUBTRACT        = 4,
+	BRANCH           = 0,
+	BRANCH_EXCHANGE  = 1,
+	MOVE             = 2,
+	MULTIPLE         = 3,
+	SUBTRACT         = 4,
+	ADD              = 5,
+	IMMEDIATE_OFFSET = 6,
 };
 class CPU
 {
@@ -75,6 +82,8 @@ private:
 	void move();
 	void multiple();
 	void subtract();
+	void add();
+	void immediate_offset();
 
 	// Instruction pointer table
 	void (CPU::*instructions[64])();

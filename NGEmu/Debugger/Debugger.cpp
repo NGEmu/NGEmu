@@ -195,30 +195,89 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 	case DATA_PROCESSING:
 	{
 		u8 sub_opcode = (opcode >> 21) & 0xF;
+		u8 Rn = (opcode >> 16) & 0xF;
+		u8 Rd = (opcode >> 12) & 0xF;
 
-		if (sub_opcode == MOVE_ID)
+		if (sub_opcode == SUBTRACT_ID)
 		{
-			u8 Rd = (opcode >> 12) & 0xF;
-			u8 rotate = ((opcode >> 8) & 0xF) * 2;
-			u16 immediate = rotate_right((u16)(opcode & 0xFF), rotate);
-			return format("MOV %s, #%X", get_register_name(Rd), immediate);
+			return format("SUB %s, %s, #%X", get_register_name(Rd), get_register_name(Rn), parse_operand(opcode & 0xFFF));
 		}
-		else if (sub_opcode == SUBTRACT_ID)
+		if (sub_opcode == ADD_ID)
 		{
-			return "SUB";
+			return format("ADD %s, %s, #%X", get_register_name(Rd), get_register_name(Rn), parse_operand(opcode & 0xFFF));
+		}
+		else if (sub_opcode == MOVE_ID)
+		{
+			return format("MOV %s, #%X", get_register_name(Rd), parse_operand(opcode & 0xFFF));
 		}
 
 		return "Unknown data processing";
 	}
 	break;
 
+	case IMMEDIATE_OFFSET_ID:
+	{
+		bool P = (opcode >> 24) & 1;
+		bool U = (opcode >> 23) & 1;
+		bool B = (opcode >> 22) & 1;
+		bool W = (opcode >> 21) & 1;
+		bool L = (opcode >> 20) & 1;
+		u8 Rn = (opcode >> 16) & 0xF;
+		u8 Rd = (opcode >> 12) & 0xF;
+		u16 offset = opcode & 0xFFF;
+		std::string instruction;
+
+		if (L)
+		{
+			instruction += "LDR";
+		}
+		else
+		{
+			instruction += "STR";
+		}
+
+		if (B)
+		{
+			instruction += "B";
+		}
+
+		u32 address = emulator.cpu->GPR[Rn];
+
+		// Check for PC
+		if (Rn == 0xF)
+		{
+			address += 8;
+		}
+
+		if (U)
+		{
+			address += offset;
+		}
+		else
+		{
+			address -= offset;
+		}
+
+		if (offset == 0)
+		{
+			instruction += format(" %s, [%s]", get_register_name(Rd), get_register_name(Rn));
+		}
+		else
+		{
+			instruction += format(" %s, =0x%X", get_register_name(Rd), address);
+		}
+
+		return instruction;
+	}
+	break;
+
 	case MULTIPLE_REG:
 	{
-		u16 register_list = opcode & 0xFFFF;
 		u8 mode = (opcode >> 23) & 3;
 		bool W = (opcode >> 21) & 1;
 		bool L = (opcode >> 20) & 1;
 		u8 Rn = (opcode >> 16) & 0xF;
+		u16 register_list = opcode & 0xFFFF;
 		bool SP = (Rn == 0xD);
 		std::string instruction;
 
@@ -294,6 +353,9 @@ std::string Debugger::parse_thumb_instruction(u16 opcode, u32 PC)
 
 void Debugger::display_debugger()
 {
+	bool thumb = emulator.cpu->thumb;
+	u8 instruction_bytes = thumb ? 2 : 4;
+
 	bool display_disassembly = true;
 	bool display_registers = true;
 	u32 debugger_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
@@ -337,18 +399,16 @@ void Debugger::display_debugger()
 
 	ImGui::EndChild();
 	ImGui::BeginChild("Disassembly", ImVec2(592, 760), true);
-	
+
 	ImGui::Columns(4, "Disassembly");
 	ImGui::SetColumnOffset(1, 26);
 	ImGui::SetColumnOffset(2, 98);
-	ImGui::SetColumnOffset(3, 190);
+	ImGui::SetColumnOffset(3, thumb ? 148.f : 190.f);
 	ImGui::Text(""); ImGui::NextColumn(); // To indicate a breakpoint
 	ImGui::Text("Address"); ImGui::NextColumn();
 	ImGui::Text("Bytes"); ImGui::NextColumn();
 	ImGui::Text("Instruction"); ImGui::NextColumn();
 	ImGui::Separator();
-
-	u8 instruction_bytes = emulator.cpu->thumb ? 2 : 4;
 
 	ImGuiListClipper clipper(0x1000000 / instruction_bytes, ImGui::GetTextLineHeight()); // Bytes are grouped by four (the alignment for instructions)
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -383,7 +443,16 @@ void Debugger::display_debugger()
 
 		ImGui::NextColumn();
 		ImGui::Text("0x%X", i); ImGui::NextColumn();
-		ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i + 3), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i));
+
+		if (thumb)
+		{
+			ImGui::Text("%02X %02X", emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i));
+		}
+		else
+		{
+			ImGui::Text("%02X %02X %02X %02X", emulator.cpu->memory.read8(i + 3), emulator.cpu->memory.read8(i + 2), emulator.cpu->memory.read8(i + 1), emulator.cpu->memory.read8(i));
+		}
+
 		ImGui::NextColumn();
 
 		if (emulator.cpu->thumb)
