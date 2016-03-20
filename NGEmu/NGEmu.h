@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HLE/Modules.h"
 #include "Loader/Loader.h"
 #include "Debugger/Debugger.h"
 #include "CPU/CPU.h"

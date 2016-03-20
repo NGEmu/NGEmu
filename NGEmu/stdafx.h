@@ -4,6 +4,7 @@
 #include "GUI/Window.h"
 #include "Misc/Utilities.h"
 
+#include <map>
 #include <sstream>
 #include "imgui.h"
 

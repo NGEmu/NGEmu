@@ -207,6 +207,9 @@ bool loader::parse(E32Image& image)
 	// There is always one exported function called NewApplication(), which starts the execution of the application. It's called through apprun.exe on pre-Symbian OS 9.
 	image.entry_point = data32[image.export_offset / 4];
 
+	// Patch imports
+	patch_imports(image);
+
 	// Don't include the header in the data
 	std::vector<decltype(image.data)::value_type>(image.data.begin() + image.code_offset, image.data.end()).swap(image.data);
 
@@ -265,6 +268,59 @@ void loader::relocate(E32Image& image, u8* data, u8* destination, u32 delta)
 			size = *(u32*)(data + 4);
 			data += 8;
 			size -= 8;
+		}
+	}
+}
+
+// Patches the imports with the module ID
+void loader::patch_imports(E32Image& image)
+{
+	u8* data = image.data.data() + image.import_offset;
+	s32 size = *(s32*)data;
+	s32 total_import_count = 0;
+
+	// HACK: There are two import tables, first one containing everything we need, but is unutilized by the application.
+	//       The second one is utilized but is missing the headers. We get headers from first one and patch imports in the second one.
+	for (s32 i = 0; i < image.dll_count; i++)
+	{
+		data = image.data.data() + image.import_offset + (i * 8) + (total_import_count * sizeof(u32)) + 4;
+
+		u32 dll_name_offset = *(u32*)data;
+		s32 import_count = *(s32*)(data + 4);
+
+		data = image.data.data() + image.code_offset + image.text_size + (total_import_count * sizeof(u32));
+		total_import_count += import_count;
+
+		std::string name((char*)(image.data.data() + image.import_offset + dll_name_offset));
+		name = name.substr(0, name.find('['));
+
+		u32* import = (u32*)data;
+
+		// Determine the module ID
+		u8 module_id = 0xFF;
+
+		for (auto& module : module_list)
+		{
+			if (module.name == name)
+			{
+				module_id = module.id;
+				break;
+			}
+		}
+
+		// No module was found with such a name
+		if (module_id == 0xFF)
+		{
+			log(ERROR, "Unable to find module ID for %s", name.c_str());
+			continue;
+		}
+
+		// Insert module IDs
+		while (import_count--)
+		{
+			u32 id = *import | (u32)module_id << 24;
+			*import = id;
+			import++;
 		}
 	}
 }

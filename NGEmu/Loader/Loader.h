@@ -60,4 +60,5 @@ namespace loader
 	u16 crc16_ccitt(u8 (&values)[6]);
 	void u8_from_32(u8 output[4], u32 value);
 	void relocate(E32Image& image, u8* data, u8* destination, u32 delta);
+	void patch_imports(E32Image& image);
 }

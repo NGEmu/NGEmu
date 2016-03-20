@@ -16,6 +16,12 @@
     <Filter Include="Emulator\Loader">
       <UniqueIdentifier>{67c6749e-7107-4fd1-90b2-dd932e254c5b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emulator\HLE">
+      <UniqueIdentifier>{9130ac2f-9505-4014-b11f-1471f43bfa33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emulator\HLE\Modules">
+      <UniqueIdentifier>{a5815cce-32a2-4ad4-a94d-540495bf2c9a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NGEmu.cpp">
@@ -41,6 +47,12 @@
     </ClCompile>
     <ClCompile Include="Loader\Loader.cpp">
       <Filter>Emulator\Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="HLE\Modules.cpp">
+      <Filter>Emulator\HLE</Filter>
+    </ClCompile>
+    <ClCompile Include="HLE\Modules\EUSER.cpp">
+      <Filter>Emulator\HLE\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -70,6 +82,12 @@
     </ClInclude>
     <ClInclude Include="Loader\Loader.h">
       <Filter>Emulator\Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="HLE\Modules.h">
+      <Filter>Emulator\HLE</Filter>
+    </ClInclude>
+    <ClInclude Include="HLE\Modules\EUSER.h">
+      <Filter>Emulator\HLE\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

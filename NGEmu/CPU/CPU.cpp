@@ -218,16 +218,24 @@ void CPU::branch()
 void CPU::branch_exchange()
 {
 	u8 Rm = opcode & 0xF;
-	set_T(GPR[Rm] & 1);
+	jump = 0;
 
-	if (Rm == 15)
+	if (Rm == 12) // System call
+	{
+		u8 module = GPR[Rm] >> 24;
+		u32 ordinal = GPR[Rm] & 0xFFFFFF;
+		HLE::call_HLE(module, ordinal);
+		PC = LR;
+		return;
+	}
+	else if (Rm == 15)
 	{
 		log(ERROR, "Register 15 specified for branch exchange");
 		return;
 	}
 
+	set_T(GPR[Rm] & 1);
 	PC = GPR[Rm] & 0xFFFFFFFE;
-	jump = 0;
 }
 
 void CPU::move()

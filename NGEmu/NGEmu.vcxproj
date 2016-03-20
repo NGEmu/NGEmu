@@ -94,7 +94,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>Common.lib;ImGuiRenderers.lib;VKstatic.1.lib;Shlwapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../Vulkan/Vulkan-build/loader/Release;../lib/</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../Vulkan/Vulkan-build/loader/Debug;../lib/</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -144,6 +144,8 @@
     </ClCompile>
     <ClCompile Include="CPU\CPU.cpp" />
     <ClCompile Include="Debugger\Debugger.cpp" />
+    <ClCompile Include="HLE\Modules.cpp" />
+    <ClCompile Include="HLE\Modules\EUSER.cpp" />
     <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="NGEmu.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -158,6 +160,8 @@
     <ClInclude Include="CPU\CPU.h" />
     <ClInclude Include="CPU\Memory.h" />
     <ClInclude Include="Debugger\Debugger.h" />
+    <ClInclude Include="HLE\Modules.h" />
+    <ClInclude Include="HLE\Modules\EUSER.h" />
     <ClInclude Include="Loader\Loader.h" />
     <ClInclude Include="NGEmu.h" />
     <ClInclude Include="stdafx.h" />
