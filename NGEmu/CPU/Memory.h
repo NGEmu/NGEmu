@@ -35,7 +35,6 @@ public:
 		write16(address, value & 0xFFFF);
 	}
 
-private:
 	u8 memory[0x1000000] = {};
 };
 

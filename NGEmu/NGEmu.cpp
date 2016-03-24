@@ -6,7 +6,7 @@ Emulator emulator;
 s32 main(s32 argc, char* argv[])
 {
 	std::string log_name = "NGEmu.log";
-	std::string rom = "Shadowkey.app"; // If a ROM isn't specified on command line, then execute the ROM specified here (for development)
+	std::string rom = "Tombraider.app"; // If a ROM isn't specified on command line, then execute the ROM specified here (for development)
 
 	if (argc >= 2)
 	{

@@ -51,13 +51,10 @@ enum : u8
 };
 class CPU
 {
-	friend class Debugger;
-
 public:
 	CPU();
 	void execute();
 
-private:
 	u32 GPR[0xF] = {};
 	u32& SP = GPR[0xD];
 	u32& LR = GPR[0xE];

@@ -224,7 +224,7 @@ void CPU::branch_exchange()
 	{
 		u8 module = GPR[Rm] >> 24;
 		u32 ordinal = GPR[Rm] & 0xFFFFFF;
-		HLE::call_HLE(module, ordinal);
+		HLE::call_HLE(*this, module, ordinal);
 		PC = LR;
 		return;
 	}
