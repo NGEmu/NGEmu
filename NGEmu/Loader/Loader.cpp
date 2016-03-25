@@ -279,7 +279,7 @@ void loader::patch_imports(E32Image& image)
 	s32 size = *(s32*)data;
 	s32 total_import_count = 0;
 
-	// HACK: There are two import tables, first one containing everything we need, but is unutilized by the application.
+	// HACK: There are two import tables, first one (the "real" one) containing everything we need, but is unutilized by the application.
 	//       The second one is utilized but is missing the headers. We get headers from first one and patch imports in the second one.
 	for (s32 i = 0; i < image.dll_count; i++)
 	{
@@ -311,7 +311,7 @@ void loader::patch_imports(E32Image& image)
 		// No module was found with such a name
 		if (module_id == 0xFF)
 		{
-			log(WARNING, "Unable to find module ID for %s", name.c_str());
+			log(WARNING, "Unable module: %s", name.c_str());
 		}
 
 		// Insert module IDs

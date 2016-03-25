@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseClang|x64">
+      <Configuration>ReleaseClang</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -26,6 +30,11 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseClang|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -37,8 +46,19 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseClang|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
+msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
+msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release
+</NMakeReBuildCommandLine>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseClang|x64'">
     <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DBUILD_TESTS=OFF -DBUILD_DEMOS=OFF ../Vulkan-LoaderAndValidationLayers
 msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release</NMakeCleanCommandLine>

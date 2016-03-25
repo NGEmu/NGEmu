@@ -173,7 +173,7 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 				if (op == MISCELLANEOUS_OTHER) // Branch and exchange
 				{
 					u8 Rm = opcode & 0xF;
-					return format("BX %s", get_register_name(Rm));
+					return format("BX %s", get_register_name(Rm).c_str());
 				}
 				else
 				{
@@ -200,15 +200,15 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 		if (sub_opcode == SUBTRACT_ID)
 		{
-			return format("SUB %s, %s, #%X", get_register_name(Rd), get_register_name(Rn), parse_operand(opcode & 0xFFF));
+			return format("SUB %s, %s, #%X", get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
 		}
 		if (sub_opcode == ADD_ID)
 		{
-			return format("ADD %s, %s, #%X", get_register_name(Rd), get_register_name(Rn), parse_operand(opcode & 0xFFF));
+			return format("ADD %s, %s, #%X", get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
 		}
 		else if (sub_opcode == MOVE_ID)
 		{
-			return format("MOV %s, #%X", get_register_name(Rd), parse_operand(opcode & 0xFFF));
+			return format("MOV %s, #%X", get_register_name(Rd).c_str(), parse_operand(opcode & 0xFFF));
 		}
 
 		return "Unknown data processing";
@@ -217,10 +217,10 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 	case IMMEDIATE_OFFSET_ID:
 	{
-		bool P = (opcode >> 24) & 1;
+		//bool P = (opcode >> 24) & 1;
 		bool U = (opcode >> 23) & 1;
 		bool B = (opcode >> 22) & 1;
-		bool W = (opcode >> 21) & 1;
+		//bool W = (opcode >> 21) & 1;
 		bool L = (opcode >> 20) & 1;
 		u8 Rn = (opcode >> 16) & 0xF;
 		u8 Rd = (opcode >> 12) & 0xF;
@@ -260,11 +260,11 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 		if (offset == 0)
 		{
-			instruction += format(" %s, [%s]", get_register_name(Rd), get_register_name(Rn));
+			instruction += format(" %s, [%s]", get_register_name(Rd).c_str(), get_register_name(Rn).c_str());
 		}
 		else
 		{
-			instruction += format(" %s, =0x%X", get_register_name(Rd), address);
+			instruction += format(" %s, =0x%X", get_register_name(Rd).c_str(), address);
 		}
 
 		return instruction;
@@ -313,14 +313,14 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 			return "Unkown adressing mode";
 		}
 
-		instruction += format(" %s", get_register_name(Rn));
+		instruction += format(" %s", get_register_name(Rn).c_str());
 
 		if (W)
 		{
 			instruction += "!";
 		}
 
-		instruction += format(", {%s}", parse_register_list(register_list));
+		instruction += format(", {%s}", parse_register_list(register_list).c_str());
 
 		return instruction;
 	}
@@ -357,7 +357,6 @@ void Debugger::display_debugger()
 	u8 instruction_bytes = thumb ? 2 : 4;
 
 	bool display_disassembly = true;
-	bool display_registers = true;
 	u32 debugger_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
 
 	ImGui::Begin("Disassembly, controls", &display_disassembly, debugger_flags);

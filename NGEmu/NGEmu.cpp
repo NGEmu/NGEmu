@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "NGEmu.h"
 
 Emulator emulator;
 

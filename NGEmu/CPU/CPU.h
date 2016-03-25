@@ -55,7 +55,7 @@ public:
 	CPU();
 	void execute();
 
-	u32 GPR[0xF] = {};
+	u32 GPR[0x10] = {};
 	u32& SP = GPR[0xD];
 	u32& LR = GPR[0xE];
 	u32& PC = GPR[0xF];

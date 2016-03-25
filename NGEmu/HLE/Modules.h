@@ -9,7 +9,7 @@ namespace HLE_function
 	{
 		inline static T from_register(CPU& cpu, const u32 reg)
 		{
-			return static_cast<T>(cast_register<std::underlying_type<T>>::from_register(cpu, reg));
+			return static_cast<T>(cast_register<T>::from_register(cpu, reg));
 		}
 	};
 
@@ -22,20 +22,29 @@ namespace HLE_function
 		}
 	};
 
+	template<>
+	struct cast_register<s32>
+	{
+		inline static s32 from_register(CPU& cpu, const u32 reg)
+		{
+			return static_cast<s32>(reg);
+		}
+	};
+
 	template<typename T>
 	inline T cast_from_register(CPU& cpu, const u32 reg)
 	{
 		return cast_register<T>::from_register(cpu, reg);
 	}
 
-	template<typename T, bool type>
+	template<typename T, bool stack>
 	struct bind_argument
 	{
-		static inline T get_arg(CPU& cpu)
+		static inline T get_arg(CPU& cpu, u8 index)
 		{
-			if (!type)
+			if (!stack)
 			{
-				return cast_from_register<T>(cpu, cpu.GPR[0]);
+				return cast_from_register<T>(cpu, cpu.GPR[index]);
 			}
 			else
 			{
@@ -44,16 +53,18 @@ namespace HLE_function
 		}
 	};
 
-	template<typename RT, typename... Args>
-	inline RT call(CPU& cpu, RT(*function)(Args...))
+	template<typename RT, typename Arg0, typename... Args, u64... Is>
+	inline RT call(CPU& cpu, RT(*function)(Arg0, Args...), std::index_sequence<Is...>)
 	{
-		return function(bind_argument<Args, static_cast<bool>(sizeof...(Args) > 4)>::get_arg(cpu)...);
+		constexpr u16 arg_count = sizeof...(Args);
+		constexpr bool use_stack = static_cast<bool>(arg_count > 3);
+		return function(reinterpret_cast<Arg0>(&cpu.memory.memory[cpu.SP]), bind_argument<Args, use_stack>::get_arg(cpu, Is)...);
 	}
 
 	template<typename T, typename... Types, typename RT, typename... Args>
 	inline RT call(CPU& cpu, RT(*function)(Args...))
 	{
-		return call<Types...>(cpu, function);
+		return call(cpu, function, std::make_index_sequence<sizeof...(Args) - 1>{});
 	}
 
 	template<typename RT, typename... T>
@@ -113,7 +124,7 @@ namespace HLE
 	};
 
 	void initialize();
-	void register_function(ModuleFunction function);
+	u32 register_function(ModuleFunction function);
 	void call_HLE(CPU& cpu, u8 module, u32 ordinal);
 }
 
