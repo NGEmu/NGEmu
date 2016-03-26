@@ -54,6 +54,9 @@
     <ClCompile Include="HLE\Modules\EUSER.cpp">
       <Filter>Emulator\HLE\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="HLE\Modules\BAFL.cpp">
+      <Filter>Emulator\HLE\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -87,6 +90,9 @@
       <Filter>Emulator\HLE</Filter>
     </ClInclude>
     <ClInclude Include="HLE\Modules\EUSER.h">
+      <Filter>Emulator\HLE\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="HLE\Modules\BAFL.h">
       <Filter>Emulator\HLE\Modules</Filter>
     </ClInclude>
   </ItemGroup>

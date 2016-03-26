@@ -36,6 +36,7 @@ public:
 	}
 
 	u8 memory[0x1000000] = {};
+	u64* base_address = reinterpret_cast<u64*>(&memory[0]);
 };
 
 // Bit manipulation functions

@@ -103,7 +103,8 @@ bool Debugger::initialize()
 	}
 
 	emulator.debugging = true;
-	emulator.emulating = false;
+	emulator.emulating = true;
+	emulator.cpu->breakpoint = 0x2C;
 
 	return true;
 }

@@ -1,12 +1,14 @@
 #include "stdafx.h"
 #include "Modules.h"
 
-extern HLE::Module EUSER;
+// Prefix the modules with m to prevent namespace conflicts
+extern HLE::Module mEUSER;
+extern HLE::Module mBAFL;
 
 std::vector<ModuleInfo> module_list =
 {
-	{ 0x0, "EUSER", &EUSER },
-	//{ 0x1, "BAFL", nullptr },
+	{ 0x0, "EUSER", &mEUSER },
+	{ 0x1, "BAFL", &mBAFL },
 };
 
 void HLE::initialize()
@@ -31,15 +33,16 @@ void HLE::call_HLE(CPU& cpu, u8 module, u32 ordinal)
 {
 	if (module > module_list.size())
 	{
+		log(ERROR, "Call to HLE function from unknown module.");
 		return;
 	}
 
-	if (auto function = &module_list[module].module->functions[ordinal])
+	if (auto function = module_list[module].module->functions[ordinal].function)
 	{
-		function->function(cpu);
+		function(cpu);
 	}
 	else
 	{
-		log(DEBUG, "Unknown function: %d from %s", ordinal, module_list[module].name);
+		log(ERROR, "Unknown function %d from %s", ordinal, module_list[module].name);
 	}
 }

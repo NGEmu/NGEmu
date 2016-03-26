@@ -98,6 +98,7 @@
     <ClCompile Include="CPU\CPU.cpp" />
     <ClCompile Include="Debugger\Debugger.cpp" />
     <ClCompile Include="HLE\Modules.cpp" />
+    <ClCompile Include="HLE\Modules\BAFL.cpp" />
     <ClCompile Include="HLE\Modules\EUSER.cpp" />
     <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="NGEmu.cpp" />
@@ -114,6 +115,7 @@
     <ClInclude Include="CPU\Memory.h" />
     <ClInclude Include="Debugger\Debugger.h" />
     <ClInclude Include="HLE\Modules.h" />
+    <ClInclude Include="HLE\Modules\BAFL.h" />
     <ClInclude Include="HLE\Modules\EUSER.h" />
     <ClInclude Include="Loader\Loader.h" />
     <ClInclude Include="NGEmu.h" />

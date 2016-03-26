@@ -2,18 +2,109 @@
 #include "EUSER.h"
 #include "HLE/Modules.h"
 
-extern HLE::Module EUSER;
+extern HLE::Module mEUSER;
+using namespace EUSER;
 
-void BufBase16(u32* stack, u8* descriptor, s32 some_int)
+// Set of static functions
+s32 User::StringLength(u16* aString)
 {
-	log(DEBUG, "TBufBase16 init! Success");
-	log(DEBUG, "stack: %p", stack);
-	log(DEBUG, "descriptor: %p", descriptor);
-	log(DEBUG, "some_int: 0x%X", some_int);
-	*descriptor = 0xFF;
+	u16 *string_pointer = aString;
+
+	while (*string_pointer)
+	{
+		string_pointer++;
+	}
+
+	return static_cast<s32>(string_pointer - aString);
 }
 
-HLE::Module EUSER("EUSER", []()
+// Descriptors
+// TDesC16
+TDesC16::TDesC16(s32 aType, s32 aLength)
 {
-	REGISTER_HLE(EUSER, BufBase16, 1283);
+	iLength = aLength;
+	iType = aType;
+}
+
+u16* TDesC16::Ptr() const
+{
+	u16* pointer = nullptr;
+	
+	switch (Type())
+	{
+	case EBuf:
+	{
+		pointer = &((SBuf16*)this)->buf[0];
+	}
+	break;
+
+	default:
+		log(ERROR, "Unknown descriptor type: %d", Type());
+	}
+
+	return pointer;
+}
+
+inline s32 TDesC16::Type() const
+{
+	return iType;
+}
+
+inline void TDesC16::DoSetLength(s32 aLength)
+{
+	iLength = aLength;
+}
+
+// TDes16
+TDes16::TDes16(s32 aType, s32 aLength, s32 aMaxLength) : TDesC16(aType, aLength)
+{
+	iMaxLength = aMaxLength;
+}
+
+void TDes16::SetLength(s32 aLength)
+{
+	DoSetLength(aLength);
+
+	if (Type() == EBufCPtr)
+	{
+		log(ERROR, "SetLength(): EBufCPtr not supported");
+	}
+}
+
+void TDes16::Copy(u16* aString)
+{
+	s32 length = User::StringLength(aString);
+	SetLength(length);
+	memcpy(WPtr(), aString, length);
+}
+
+inline u16* TDes16::WPtr() const
+{
+	return Ptr();
+}
+
+// TBufBase16
+TBufBase16::TBufBase16(s32 aMaxLength) : TDes16(EBuf, 0, aMaxLength)
+{
+}
+
+TBufBase16::TBufBase16(u16* aString, s32 aMaxLength) : TDes16(EBuf, 0, aMaxLength)
+{
+	Copy(aString);
+}
+
+// Wrapper functions
+void TBufBase16_1(u32* object, s32 aMaxLength)
+{
+	new((TBufBase16*)object)TBufBase16(aMaxLength);
+}
+
+void TBufBase16_3(u32* object, u16* aString, s32 aMaxLength)
+{
+	new((TBufBase16*)object)TBufBase16(aString, aMaxLength);
+}
+
+HLE::Module mEUSER("EUSER", []()
+{
+	REGISTER_HLE(mEUSER, TBufBase16_1, 1283);
 });

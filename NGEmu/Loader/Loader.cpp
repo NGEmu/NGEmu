@@ -311,7 +311,7 @@ void loader::patch_imports(E32Image& image)
 		// No module was found with such a name
 		if (module_id == 0xFF)
 		{
-			log(WARNING, "Unable module: %s", name.c_str());
+			log(WARNING, "Unknown module: %s", name.c_str());
 		}
 
 		// Insert module IDs
