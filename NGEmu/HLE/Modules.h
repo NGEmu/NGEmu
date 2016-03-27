@@ -55,6 +55,15 @@ namespace HLE_function
 	};
 
 	template<>
+	struct cast_register<u32>
+	{
+		inline static u32 to_register(CPU& cpu, const u32 value)
+		{
+			return value;
+		}
+	};
+
+	template<>
 	struct cast_register<s32>
 	{
 		inline static s32 from_register(CPU& cpu, const u32 reg)
@@ -130,7 +139,6 @@ namespace HLE_function
 		static inline void do_call(CPU& cpu, function function)
 		{
 			bind_result<RT>::put_result(cpu, call<T...>(cpu, function));
-			//static_assert(false, "Return values for functions are unsupported");
 		}
 	};
 

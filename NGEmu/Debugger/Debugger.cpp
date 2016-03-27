@@ -103,8 +103,7 @@ bool Debugger::initialize()
 	}
 
 	emulator.debugging = true;
-	emulator.emulating = true;
-	emulator.cpu->breakpoint = 0x2C;
+	emulator.emulating = false;
 
 	return true;
 }
@@ -149,13 +148,27 @@ std::string Debugger::parse_register_list(u16 reg_list)
 std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 {
 	u8 condition = (opcode >> 28) & 0xF;
-	u8 id = (opcode >> 24) & 0xF; // The full 4 bit ID of the instruction
 	u8 id3 = (opcode >> 24) & 0xE; // First 3 bits of the ID, to help with identification
+	std::string cond;
+
+	switch (condition)
+	{
+	case ALWAYS:
+		break;
+
+	case EQUAL:
+		cond = "EQ";
+		break;
+
+	default:
+		cond = "(unk. cond)";
+	}
 
 	if (condition == 0b1111)
 	{
 		return "0b1111 condition";
 	}
+	
 
 	switch (id3)
 	{
@@ -174,7 +187,7 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 				if (op == MISCELLANEOUS_OTHER) // Branch and exchange
 				{
 					u8 Rm = opcode & 0xF;
-					return format("BX %s", get_register_name(Rm).c_str());
+					return format("BX%s %s", cond.c_str(), get_register_name(Rm).c_str());
 				}
 				else
 				{
@@ -198,18 +211,20 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 		u8 sub_opcode = (opcode >> 21) & 0xF;
 		u8 Rn = (opcode >> 16) & 0xF;
 		u8 Rd = (opcode >> 12) & 0xF;
+		bool S = (opcode >> 20) & 1;
+		std::string update = S ? "S" : "";
 
 		if (sub_opcode == SUBTRACT_ID)
 		{
-			return format("SUB %s, %s, #%X", get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
+			return format("SUB%s%s %s, %s, #%X", update, cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
 		}
 		if (sub_opcode == ADD_ID)
 		{
-			return format("ADD %s, %s, #%X", get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
+			return format("ADD%s%s %s, %s, #%X", update, cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
 		}
 		else if (sub_opcode == MOVE_ID)
 		{
-			return format("MOV %s, #%X", get_register_name(Rd).c_str(), parse_operand(opcode & 0xFFF));
+			return format("MOV%s%s %s, #%X", update, cond.c_str(), get_register_name(Rd).c_str(), parse_operand(opcode & 0xFFF));
 		}
 
 		return "Unknown data processing";
@@ -261,11 +276,11 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 		if (offset == 0)
 		{
-			instruction += format(" %s, [%s]", get_register_name(Rd).c_str(), get_register_name(Rn).c_str());
+			instruction += format("%s %s, [%s]", cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str());
 		}
 		else
 		{
-			instruction += format(" %s, =0x%X", get_register_name(Rd).c_str(), address);
+			instruction += format("%s %s, =0x%X", cond.c_str(), get_register_name(Rd).c_str(), address);
 		}
 
 		return instruction;
@@ -314,7 +329,7 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 			return "Unkown adressing mode";
 		}
 
-		instruction += format(" %s", get_register_name(Rn).c_str());
+		instruction += format("%s %s", cond.c_str(), get_register_name(Rn).c_str());
 
 		if (W)
 		{
@@ -329,16 +344,16 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 
 	case BRANCH_ID:
 	{
-		bool link = id & 1;
+		bool link = (opcode >> 24) & 1;
 		u32 address = (((s32)(opcode << 8) >> 8) << 2) + PC + 8;
 
 		if (link)
 		{
-			return format("BL %X", address);
+			return format("BL%s %X", cond.c_str(), address);
 		}
 		else
 		{
-			return format("B %X", address);
+			return format("B%s %X", cond.c_str(), address);
 		}
 	}
 	break;
@@ -354,7 +369,7 @@ std::string Debugger::parse_thumb_instruction(u16 opcode, u32 PC)
 
 void Debugger::display_debugger()
 {
-	bool thumb = emulator.cpu->thumb;
+	bool thumb = emulator.cpu->CPSR.T;
 	u8 instruction_bytes = thumb ? 2 : 4;
 
 	bool display_disassembly = true;
@@ -455,7 +470,7 @@ void Debugger::display_debugger()
 
 		ImGui::NextColumn();
 
-		if (emulator.cpu->thumb)
+		if (thumb)
 		{
 			ImGui::Text("%s", parse_thumb_instruction(emulator.cpu->memory.read16(i), i).c_str());
 		}
@@ -475,14 +490,13 @@ void Debugger::display_debugger()
 	ImGui::BeginGroup();
 	ImGui::BeginChild("Registers", ImVec2(200, 300), true);
 
-	for (u8 i = 0; i < 13; i++)
+	for (u8 i = 0; i < 0xF; i++)
 	{
-		ImGui::Text("R%d: 0x%X", i, emulator.cpu->GPR[i]);
+		ImGui::Text("%s: ", get_register_name(i));
+		ImGui::SameLine(38);
+		ImGui::Text("0x%X", emulator.cpu->GPR[i]);
 	}
 
-	ImGui::Text("SP: 0x%X", emulator.cpu->SP);
-	ImGui::Text("LR: 0x%X", emulator.cpu->LR);
-	ImGui::Text("PC: 0x%X", emulator.cpu->PC);
 	ImGui::Text("CPSR: 0x%X", emulator.cpu->CPSR);
 
 	ImGui::EndChild();

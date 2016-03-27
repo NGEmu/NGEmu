@@ -5,10 +5,15 @@
 extern HLE::Module mEUSER;
 using namespace EUSER;
 
-// Set of static functions
+// User static functions
+u32 User::Alloc(s32 aSize)
+{
+	return emulator.cpu->memory.allocate_heap(aSize);
+}
+
 s32 User::StringLength(u16* aString)
 {
-	u16 *string_pointer = aString;
+	u16* string_pointer = aString;
 
 	while (*string_pointer)
 	{
@@ -94,17 +99,25 @@ TBufBase16::TBufBase16(u16* aString, s32 aMaxLength) : TDes16(EBuf, 0, aMaxLengt
 }
 
 // Wrapper functions
-void TBufBase16_1(u32* object, s32 aMaxLength)
+namespace EUSER
 {
-	new((TBufBase16*)object)TBufBase16(aMaxLength);
-}
+	u32 malloc(s32 aSize)
+	{
+		return User::Alloc(aSize);
+	}
 
-void TBufBase16_3(u32* object, u16* aString, s32 aMaxLength)
-{
-	new((TBufBase16*)object)TBufBase16(aString, aMaxLength);
+	void TBufBase16_1(u32* object, s32 aMaxLength)
+	{
+		new((TBufBase16*)object)TBufBase16(aMaxLength);
+	}
+
+	void TBufBase16_3(u32* object, u16* aString, s32 aMaxLength)
+	{
+		new((TBufBase16*)object)TBufBase16(aString, aMaxLength);
+	}
 }
 
 HLE::Module mEUSER("EUSER", []()
 {
-	REGISTER_HLE(mEUSER, TBufBase16_1, 1283);
+	REGISTER_HLE(mEUSER, EUSER::TBufBase16_1, 1283);
 });

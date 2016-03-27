@@ -6,6 +6,7 @@ namespace EUSER
 	class User
 	{
 	public:
+		static u32 Alloc(s32 aSize);
 		static s32 StringLength(u16* aString);
 	};
 
@@ -63,4 +64,9 @@ namespace EUSER
 		s32 maxLength;
 		u16 buf[1];
 	};
+
+	// Wrapper functions
+	u32 malloc(s32 aSize);
+	void TBufBase16_1(u32* object, s32 aMaxLength);
+	void TBufBase16_3(u32* object, u16* aString, s32 aMaxLength);
 }

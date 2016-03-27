@@ -5,6 +5,9 @@ namespace BAFL
 	class CCommandLineArguments
 	{
 	public:
-		static CCommandLineArguments* NewL();
+		static u32 NewL();
 	};
+
+	// Wrapper functions
+	u32 CCommandLineArguments_NewL();
 }

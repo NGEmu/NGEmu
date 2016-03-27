@@ -6,19 +6,22 @@ extern HLE::Module mBAFL;
 using namespace BAFL;
 
 // Command line argument functions
-CCommandLineArguments* CCommandLineArguments::NewL()
+u32 CCommandLineArguments::NewL()
 {
 	log(ERROR, "TODO: CCommandLineArguments::NewL()");
-	return nullptr;
+	return 0;
 }
 
 // Wrapper functions
-u64* CCommandLineArguments_NewL()
+namespace BAFL
 {
-	return (u64*)CCommandLineArguments::NewL();
+	u32 CCommandLineArguments_NewL()
+	{
+		return (u32)CCommandLineArguments::NewL();
+	}
 }
 
 HLE::Module mBAFL("BAFL", []()
 {
-	REGISTER_HLE(mBAFL, CCommandLineArguments_NewL, 88);
+	REGISTER_HLE(mBAFL, BAFL::CCommandLineArguments_NewL, 88);
 });

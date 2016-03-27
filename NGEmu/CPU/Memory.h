@@ -37,6 +37,59 @@ public:
 
 	u8 memory[0x1000000] = {};
 	u64* base_address = reinterpret_cast<u64*>(&memory[0]);
+
+	// Heap
+	std::map<u32, u32> heap;
+	u32 heap_begin;
+	u32 heap_size;
+	u32 heap_cursor;
+
+	inline u32 allocate_heap(u32 size)
+	{
+		if (size > heap_size)
+		{
+			log(ERROR, "Size bigger than heap size! Send help.");
+			return 0;
+		}
+
+		if (heap_cursor > 0x800000)
+		{
+			log(ERROR, "Heap overflow!");
+			return 0;
+		}
+
+		u32 alloc_address = 0;
+		u32 current_size = 0;
+		u32 prev_address_end = 0x100000;
+
+		for (auto& iterator : heap)
+		{
+			// TODO: Improve allocation logic (allocating before a block with no block before)
+			if (prev_address_end + size < iterator.first) // Allocate inbetween allocations
+			{
+				log(ERROR, "TODO: Allocation between heaps.");
+				alloc_address = prev_address_end + 1;
+			}
+
+			prev_address_end = iterator.first + iterator.second;
+		}
+
+		if (alloc_address == 0)
+		{
+			alloc_address = heap_cursor;
+		}
+
+		// Increase heap size
+		if (alloc_address + size > heap_size)
+		{
+			heap_size += size + 0x100; // Increase by desired size and a little extra
+		}
+
+		heap.emplace(alloc_address, size);
+		heap_cursor = alloc_address + size + 4;
+
+		return alloc_address;
+	}
 };
 
 // Bit manipulation functions
@@ -80,7 +133,7 @@ inline T reverse(T n, u64 b = std::numeric_limits<T>::digits)
 	return reversed;
 }
 
-inline u8 rotate_right(u8 value, u8 shift)
+inline u8 rotate_right(u8& value, u8 shift)
 {
 #ifdef _MSC_VER
 	return _rotr8(value, shift);
@@ -89,7 +142,7 @@ inline u8 rotate_right(u8 value, u8 shift)
 #endif
 }
 
-inline u16 rotate_right(u16 value, u8 shift)
+inline u16 rotate_right(u16& value, u8 shift)
 {
 #ifdef _MSC_VER
 	return _rotr16(value, shift);
@@ -98,7 +151,7 @@ inline u16 rotate_right(u16 value, u8 shift)
 #endif
 }
 
-inline u8 rotate_left(u8 value, u8 shift)
+inline u8 rotate_left(u8& value, u8 shift)
 {
 #ifdef _MSC_VER
 	return _rotl8(value, shift);
@@ -107,7 +160,7 @@ inline u8 rotate_left(u8 value, u8 shift)
 #endif
 }
 
-inline u16 rotate_left(u16 value, u8 shift)
+inline u16 rotate_left(u16& value, u8 shift)
 {
 #ifdef _MSC_VER
 	return _rotl16(value, shift);
@@ -116,67 +169,23 @@ inline u16 rotate_left(u16 value, u8 shift)
 #endif
 }
 
-// Carry and overflow functions
-//inline s32 carry_from(u32 a, u32 b)
-//{
-//	if ((u64)(a)+b > UINT_MAX)
-//	{
-//		return 1;
-//	}
-//	else
-//	{
-//		return 0;
-//	}
-//};
-//
-//inline s32 overflow_from(s32 a, s32 b)
-//{
-//	s32 c = a + b;
-//
-//	if ((a > 0 && b > 0 && c < 0) || (a < 0 && b <0 && c >0))
-//	{
-//		return 1;
-//	}
-//	else
-//	{
-//		return 0;
-//	}
-//};
-//
-//inline s32 carry_from(u32 a, u32 b, s32 carry)
-//{
-//	if (carry == 0)
-//	{
-//		return carry_from(a, b);
-//	}
-//	else
-//	{
-//		if (carry_from(a, b + 1) || carry_from(a + 1, b) || carry_from(a, b))
-//		{
-//			return 1;
-//		}
-//		else
-//		{
-//			return 0;
-//		}
-//	}
-//};
-//
-//inline s32 overflow_from(s32 a, s32 b, s32 carry)
-//{
-//	if (!get_C())
-//	{
-//		return overflow_from(a, b);
-//	}
-//	else
-//	{
-//		if (overflow_from(a, b + 1) || overflow_from(a + 1, b) || overflow_from(a, b))
-//		{
-//			return 1;
-//		}
-//		else
-//		{
-//			return 0;
-//		}
-//	}
-//};
+// Borrow, carry and overflow functions
+template<typename A, typename B>
+inline bool borrow(A& a, B& b)
+{
+	log(ERROR, "TODO: Borrow detection");
+	return a > b;
+}
+
+template<typename A, typename B>
+inline bool carry(A& a, B& b)
+{
+	return !borrow(a, b);
+}
+
+template<typename A, typename B>
+inline bool overflow(A& a, B& b)
+{
+	log(ERROR, "TODO: Overflow detection");
+	return false;
+}

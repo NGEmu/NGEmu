@@ -8,6 +8,10 @@ u16 parse_operand(u16 operand);
 // Instructions
 enum : u8
 {
+	// Conditions
+	EQUAL  = 0b0000,
+	ALWAYS = 0b1110,
+
 	// Main opcode IDs
 	VARIOUS             = 0b0000,
 	DATA_PROCESSING     = 0b0010,
@@ -49,6 +53,21 @@ enum : u8
 	ADD              = 5,
 	IMMEDIATE_OFFSET = 6,
 };
+
+struct CPSR
+{
+	u32 M : 4;
+	u32 T : 1;
+	u32 F : 1;
+	u32 I : 1;
+	u32   : 20;
+	u32 Q : 1;
+	u32 V : 1;
+	u32	C : 1;
+	u32 Z : 1;
+	u32 N : 1;
+};
+
 class CPU
 {
 public:
@@ -59,14 +78,13 @@ public:
 	u32& SP = GPR[0xD];
 	u32& LR = GPR[0xE];
 	u32& PC = GPR[0xF];
-	u32 CPSR = {};
+	CPSR CPSR = {};
 
 	Memory memory;
 	s32 breakpoint;
 	u32 opcode;
 	u32 instruction;
 	u8 jump;
-	bool thumb;
 
 	void fetch(u8 default_jump);
 	bool decode_ARM();
@@ -84,56 +102,4 @@ public:
 
 	// Instruction pointer table
 	void (CPU::*instructions[64])();
-
-	// CPSR functions
-	inline bool get_N()
-	{
-		return get_bit(CPSR, 31);
-	}
-
-	inline bool get_Z()
-	{
-		return get_bit(CPSR, 30);
-	}
-
-	inline bool get_C()
-	{
-		return get_bit(CPSR, 29);
-	}
-
-	inline bool get_V()
-	{
-		return get_bit(CPSR, 28);
-	}
-
-	inline bool get_T()
-	{
-		return get_bit(CPSR, 5);
-	}
-
-	inline void set_N(bool value)
-	{
-		set_bit(CPSR, 31, value);
-	}
-
-	inline void set_Z(bool value)
-	{
-		set_bit(CPSR, 30, value);
-	}
-
-	inline void set_C(bool value)
-	{
-		set_bit(CPSR, 29, value);
-	}
-
-	inline void set_V(bool value)
-	{
-		set_bit(CPSR, 28, value);
-	}
-
-	inline void set_T(bool value)
-	{
-		set_bit(CPSR, 5, value);
-		thumb = value;
-	}
 };

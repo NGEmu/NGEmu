@@ -5,7 +5,8 @@
 u16 parse_operand(u16 operand)
 {
 	u8 rotate = (operand >> 8) * 2;
-	u16 immediate = rotate_right((u16)(operand & 0xFF), rotate);
+	u16 value = operand & 0xFF;
+	u16 immediate = rotate_right(value, rotate);
 	return immediate;
 }
 
@@ -21,6 +22,12 @@ CPU::CPU()
 		memory.write8(static_cast<u32>(i), emulator.rom.data[i]);
 	}
 
+	// Init the heap
+	memory.heap_begin = static_cast<u32>(emulator.rom.data.size());
+	memory.heap_size = emulator.rom.heap_minimum_size;
+	memory.heap_cursor = memory.heap_begin;
+
+	// Instruction pointers
 	instructions[BRANCH]           = &CPU::branch;
 	instructions[BRANCH_EXCHANGE]  = &CPU::branch_exchange;
 	instructions[MOVE]             = &CPU::move;
@@ -46,8 +53,17 @@ bool CPU::decode_ARM()
 	// Check the execution condition
 	switch(condition)
 	{
-	case 0b1110: // Always (Unconditional execution)
+	case ALWAYS:
 		break;
+
+	case EQUAL:
+	{
+		if (!CPSR.Z)
+		{
+			return false;
+		}
+	}
+	break;
 
 	default:
 		log(ERROR, "Unsupported condition: 0x%X", condition);
@@ -168,7 +184,7 @@ inline void CPU::debug()
 void CPU::execute()
 {
 	// Whether to execute as Thumb or ARM
-	if (thumb)
+	if (CPSR.T)
 	{
 		fetch(2);
 
@@ -234,7 +250,7 @@ void CPU::branch_exchange()
 		return;
 	}
 
-	set_T(GPR[Rm] & 1);
+	CPSR.T = (GPR[Rm] & 1);
 	PC = GPR[Rm] & 0xFFFFFFFE;
 }
 
@@ -335,16 +351,21 @@ void CPU::subtract()
 	bool update = (opcode >> 20) & 1;
 	u8 Rn = (opcode >> 16) & 0xF;
 	u8 Rd = (opcode >> 12) & 0xF;
+	u16 operand = parse_operand(opcode & 0xFFF);
 	
-	GPR[Rd] = GPR[Rn] - parse_operand(opcode & 0xFFF);
+	GPR[Rd] = GPR[Rn] - operand;
 
 	if (update && Rd == 15)
 	{
-		log(ERROR, "MOV with S == 1 and Rd == 15");
+		log(ERROR, "SUB with S == 1 and Rd == 15");
 	}
-	else if (update)
+	
+	if (update)
 	{
-		log(ERROR, "MOV with S == 1");
+		CPSR.N = (GPR[Rd] >> 31) & 1;
+		CPSR.Z = GPR[Rd] == 0;
+		CPSR.C = carry(operand, GPR[Rn]);
+		CPSR.V = overflow(GPR[Rn], operand);
 	}
 }
 
@@ -410,6 +431,7 @@ void CPU::immediate_offset()
 
 	if (P && W)
 	{
+		log(ERROR, "Immediate offset: P && W (report this!)");
 		GPR[Rn] = address;
 	}
 }
