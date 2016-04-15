@@ -17,7 +17,8 @@ namespace BAFL
 {
 	u32 CCommandLineArguments_NewL()
 	{
-		return (u32)CCommandLineArguments::NewL();
+		log(WARNING, "CCommandLineArguments::NewL()");
+		return CCommandLineArguments::NewL();
 	}
 }
 

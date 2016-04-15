@@ -5,10 +5,52 @@
 extern HLE::Module mEUSER;
 using namespace EUSER;
 
-// User static functions
+// General static functions
+void Mem::FillZ(u32* aTrg, s32 aLength)
+{
+	memset(aTrg, 0, aLength);
+}
+
+void User::Leave()
+{
+	emulator.emulating = false;
+}
+
 u32 User::Alloc(s32 aSize)
 {
 	return emulator.cpu->memory.allocate_heap(aSize);
+}
+
+u32 User::AllocZ(s32 aSize)
+{
+	u32 address = Alloc(aSize);
+
+	if (address)
+	{
+		Mem::FillZ(emulator.cpu->memory.get_pointer(address), aSize);
+	}
+
+	return address;
+}
+
+u32 User::AllocZL(s32 aSize)
+{
+	u32 address = AllocL(aSize);
+	Mem::FillZ(emulator.cpu->memory.get_pointer(address), aSize);
+	return address;
+}
+
+u32 User::AllocL(s32 aSize)
+{
+	u32 address = Alloc(aSize);
+	
+	if (!address)
+	{
+		log(ERROR, "AllocL(): Failed to allocate on the heap! Aborting.");
+		User::Leave();
+	}
+
+	return address;
 }
 
 s32 User::StringLength(u16* aString)
@@ -103,21 +145,37 @@ namespace EUSER
 {
 	u32 malloc(s32 aSize)
 	{
+		log(WARNING, "malloc(aSize=0x%X)", aSize);
 		return User::Alloc(aSize);
 	}
 
 	void TBufBase16_1(u32* object, s32 aMaxLength)
 	{
+		log(WARNING, "TBufBase16(aMaxLength=0x%X)", aMaxLength);
 		new((TBufBase16*)object)TBufBase16(aMaxLength);
 	}
 
 	void TBufBase16_3(u32* object, u16* aString, s32 aMaxLength)
 	{
+		log(WARNING, "TBufBase16(aString=*0x%x, aMaxLength=0x%X)", aString, aMaxLength);
 		new((TBufBase16*)object)TBufBase16(aString, aMaxLength);
+	}
+
+	u32 CBase_new(u32 aSize)
+	{
+		log(WARNING, "CBase::new(aSize=0x%X)", aSize);
+		return User::AllocZ(aSize);
+	}
+
+	u32 CBase_newL(u32 aSize)
+	{
+		log(WARNING, "CBase::newL(aSize=0x%X)", aSize);
+		return User::AllocZL(aSize);
 	}
 }
 
 HLE::Module mEUSER("EUSER", []()
 {
-	REGISTER_HLE(mEUSER, EUSER::TBufBase16_1, 1283);
+	REGISTER_HLE(mEUSER, EUSER::CBase_newL, 3);
+	REGISTER_HLE(mEUSER, EUSER::CBase_new, 1582);
 });

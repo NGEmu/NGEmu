@@ -46,17 +46,13 @@ namespace HLE_function
 	};
 
 	template<>
-	struct cast_register<u64*>
-	{
-		inline static u32 to_register(CPU& cpu, const u64* value)
-		{
-			return static_cast<u32>(value - cpu.memory.base_address);
-		}
-	};
-
-	template<>
 	struct cast_register<u32>
 	{
+		inline static u32 from_register(CPU& cpu, const u32 reg)
+		{
+			return reg;
+		}
+
 		inline static u32 to_register(CPU& cpu, const u32 value)
 		{
 			return value;

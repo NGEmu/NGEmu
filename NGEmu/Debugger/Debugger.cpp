@@ -104,6 +104,7 @@ bool Debugger::initialize()
 
 	emulator.debugging = true;
 	emulator.emulating = false;
+	//emulator.cpu->breakpoint = 0x...; // For debugging
 
 	return true;
 }
@@ -149,6 +150,7 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 {
 	u8 condition = (opcode >> 28) & 0xF;
 	u8 id3 = (opcode >> 24) & 0xE; // First 3 bits of the ID, to help with identification
+	bool shift = false;
 	std::string cond;
 
 	switch (condition)
@@ -175,11 +177,11 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 	case VARIOUS:
 	{
 		u8 id2 = (opcode >> 23) & 3;
+		u8 id4 = (opcode >> 4) & 0xF;
 		bool update = (opcode >> 20) & 1;
 		
 		if (!update && id2 == MISCELLANEOUS_ID)
 		{
-			u8 id4 = (opcode >> 4) & 0xF;
 			u8 op = (opcode >> 21) & 3;
 
 			if (id4 == MISCELLANEOUS_BRANCH_ZEROS)
@@ -199,32 +201,42 @@ std::string Debugger::parse_instruction(u32 opcode, u32 PC)
 				return "Unknown misc category";
 			}
 		}
+		else if (id2 != MISCELLANEOUS_ID && id4 == 0) // Data processing immediate shift
+		{
+			// Fallthrough to DATA_PROCESSING
+			shift = true;
+		}
 		else
 		{
 			return "Unknown various op";
 		}
 	}
-	break;
 
 	case DATA_PROCESSING:
 	{
 		u8 sub_opcode = (opcode >> 21) & 0xF;
+		bool S = (opcode >> 20) & 1;
 		u8 Rn = (opcode >> 16) & 0xF;
 		u8 Rd = (opcode >> 12) & 0xF;
-		bool S = (opcode >> 20) & 1;
+		u8 Rm = opcode & 0xF;
+		u16 value = opcode & 0xFFF;
 		std::string update = S ? "S" : "";
 
-		if (sub_opcode == SUBTRACT_ID)
+		// TODO: Shift support
+		value = shift ? 0 : parse_operand(value);
+		std::string operand = (value || !shift) ? format("#%X", value) : format("%s", get_register_name(shift ? Rm : Rn).c_str());
+
+		if (sub_opcode == MOVE_ID)
 		{
-			return format("SUB%s%s %s, %s, #%X", update, cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
+			return format("MOV%s%s %s, %s", update, cond.c_str(), get_register_name(Rd).c_str(), operand.c_str());
 		}
-		if (sub_opcode == ADD_ID)
+		else if (sub_opcode == SUBTRACT_ID)
 		{
-			return format("ADD%s%s %s, %s, #%X", update, cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), parse_operand(opcode & 0xFFF));
+			return format("SUB%s%s %s, %s, %s", update, cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), operand.c_str());
 		}
-		else if (sub_opcode == MOVE_ID)
+		else if (sub_opcode == ADD_ID)
 		{
-			return format("MOV%s%s %s, #%X", update, cond.c_str(), get_register_name(Rd).c_str(), parse_operand(opcode & 0xFFF));
+			return format("ADD%s%s %s, %s, %s", update, cond.c_str(), get_register_name(Rd).c_str(), get_register_name(Rn).c_str(), operand.c_str());
 		}
 
 		return "Unknown data processing";

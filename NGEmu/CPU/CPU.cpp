@@ -10,6 +10,19 @@ u16 parse_operand(u16 operand)
 	return immediate;
 }
 
+u16 parse_shift(u8 value)
+{
+	u8 shift = value & 3;
+	u8 shift_amount = value >> 2;
+
+	if (shift != 0 || shift_amount != 0)
+	{
+		log(ERROR, "Shifting is actually not supported!");
+	}
+
+	return 0;
+}
+
 CPU::CPU()
 {
 	breakpoint = -1;
@@ -23,9 +36,8 @@ CPU::CPU()
 	}
 
 	// Init the heap
-	memory.heap_begin = static_cast<u32>(emulator.rom.data.size());
+	memory.heap_cursor = memory.heap_begin = static_cast<u32>(emulator.rom.data.size());
 	memory.heap_size = emulator.rom.heap_minimum_size;
-	memory.heap_cursor = memory.heap_begin;
 
 	// Instruction pointers
 	instructions[BRANCH]           = &CPU::branch;
@@ -49,6 +61,7 @@ bool CPU::decode_ARM()
 {
 	u8 condition = (opcode >> 28) & 0xF;
 	u8 id3 = (opcode >> 24) & 0xE; // First 3 bits of the ID, to help with identification
+	bool shift = false; // Whether a shift operation or not
 
 	// Check the execution condition
 	switch(condition)
@@ -75,11 +88,11 @@ bool CPU::decode_ARM()
 	case VARIOUS:
 	{
 		u8 id2 = (opcode >> 23) & 3;
+		u8 id4 = (opcode >> 4) & 0xF;
 		bool update = (opcode >> 20) & 1;
 
 		if (!update && id2 == MISCELLANEOUS_ID)
 		{
-			u8 id4 = (opcode >> 4) & 0xF;
 			u8 op = (opcode >> 21) & 3;
 
 			if (id4 == MISCELLANEOUS_BRANCH_ZEROS)
@@ -87,6 +100,7 @@ bool CPU::decode_ARM()
 				if (op == MISCELLANEOUS_OTHER) // Branch and exchange
 				{
 					instruction = BRANCH_EXCHANGE;
+					break;
 				}
 				else
 				{
@@ -100,13 +114,17 @@ bool CPU::decode_ARM()
 				return false;
 			}
 		}
+		else if (id2 != MISCELLANEOUS_ID && id4 == 0) // Data processing immediate shift
+		{
+			// Fallthrough to DATA_PROCESSING
+			shift = true;
+		}
 		else
 		{
 			log(ERROR, "Unknown various op");
 			return false;
 		}
 	}
-	break;
 
 	case DATA_PROCESSING:
 	{
@@ -257,22 +275,29 @@ void CPU::branch_exchange()
 void CPU::move()
 {
 	bool update = (opcode >> 20) & 1;
-	u8 SBZ = (opcode >> 16) & 0xF; // Should be zero
+	bool shift = !((opcode >> 24) & 0xE);
+	u8 Rn = (opcode >> 16) & 0xF;
 	u8 Rd = (opcode >> 12) & 0xF;
-	u16 operand = opcode & 0xFFF;
+	u8 Rm = opcode & 0xF;
+	u16 value = opcode & 0xFFF;
+	//u8 shift_value = (opcode >> 5) & 0x7F;
 
-	if (!((update >> 25) & 1) && ((operand >> 7) & 1) && ((operand >> 4) & 1))
+	if (!((opcode >> 25) & 1) && ((value >> 7) & 1) && ((value >> 4) & 1))
 	{
 		log(ERROR, "Extended MOV instruction!");
 		return;
 	}
 
-	if (SBZ != 0)
-	{
-		log(ERROR, "MOV SBZ is not zero!");
-	}
+	value = shift ? parse_shift((opcode >> 5) & 0x7F) : parse_operand(value);
 
-	GPR[Rd] = parse_operand(operand);
+	if (!value)
+	{
+		GPR[Rd] = GPR[shift ? Rm : Rn];
+	}
+	else
+	{
+		GPR[Rd] = value;
+	}
 
 	if (update && Rd == 15)
 	{

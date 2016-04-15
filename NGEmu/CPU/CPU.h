@@ -4,6 +4,7 @@
 
 // Some helper functions
 u16 parse_operand(u16 operand);
+u16 parse_shift(u8 value);
 
 // Instructions
 enum : u8

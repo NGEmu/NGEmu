@@ -2,12 +2,28 @@
 
 namespace EUSER
 {
-	// Set of static functions
+	// Some general static classes
+	class Mem
+	{
+	public:
+		inline static void FillZ(u32* aTrg, s32 aLength);
+	};
+
 	class User
 	{
 	public:
+		static void Leave();
 		static u32 Alloc(s32 aSize);
+		static u32 AllocL(s32 aSize);
+		static u32 AllocZ(s32 aSize);
+		static u32 AllocZL(s32 aSize);
 		static s32 StringLength(u16* aString);
+	};
+
+	// CBase
+	class CBase
+	{
+	public:
 	};
 
 	// Descriptor stuff
@@ -69,4 +85,6 @@ namespace EUSER
 	u32 malloc(s32 aSize);
 	void TBufBase16_1(u32* object, s32 aMaxLength);
 	void TBufBase16_3(u32* object, u16* aString, s32 aMaxLength);
+	u32 CBase_new(u32 aSize);
+	u32 CBase_newL(u32 aSize);
 }

@@ -3,12 +3,14 @@
 
 // Prefix the modules with m to prevent namespace conflicts
 extern HLE::Module mEUSER;
+extern HLE::Module mEIKCORE;
 extern HLE::Module mBAFL;
 
 std::vector<ModuleInfo> module_list =
 {
 	{ 0x0, "EUSER", &mEUSER },
-	{ 0x1, "BAFL", &mBAFL },
+	{ 0x1, "EIKCORE", &mEIKCORE },
+	{ 0x2, "BAFL", &mBAFL },
 };
 
 void HLE::initialize()
@@ -17,7 +19,7 @@ void HLE::initialize()
 	{
 		if (module.module)
 		{
-			module.module->functions.resize(4096, HLE::ModuleFunction(0, nullptr, nullptr, nullptr));
+			module.module->functions.resize(4096, HLE::ModuleFunction(0xBAD, nullptr, nullptr, nullptr));
 			module.module->initialize();
 		}
 	}

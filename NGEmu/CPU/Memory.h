@@ -36,7 +36,13 @@ public:
 	}
 
 	u8 memory[0x1000000] = {};
-	u64* base_address = reinterpret_cast<u64*>(&memory[0]);
+	u32* base_address = reinterpret_cast<u32*>(&memory[0]);
+
+	// So we can use standard libary functions that need pointers in HLE implementation
+	inline u32* get_pointer(u32 address)
+	{
+		return base_address + address;
+	}
 
 	// Heap
 	std::map<u32, u32> heap;
@@ -65,10 +71,10 @@ public:
 		for (auto& iterator : heap)
 		{
 			// TODO: Improve allocation logic (allocating before a block with no block before)
-			if (prev_address_end + size < iterator.first) // Allocate inbetween allocations
+			if (prev_address_end < iterator.first) // Allocate inbetween allocations
 			{
 				log(ERROR, "TODO: Allocation between heaps.");
-				alloc_address = prev_address_end + 1;
+				alloc_address = prev_address_end + 4;
 			}
 
 			prev_address_end = iterator.first + iterator.second;
@@ -118,19 +124,6 @@ inline void set_bit(u32& value, u8 bit, bool state)
 	{
 		clear_bit(value, bit);
 	}
-}
-
-template<typename T>
-inline T reverse(T n, u64 b = std::numeric_limits<T>::digits)
-{
-	T reversed = 0;
-
-	for (u64 i = 0; i < b; ++i, n >>= 1)
-	{
-		reversed = (reversed >> 1) | (n & 0x01);
-	}
-
-	return reversed;
 }
 
 inline u8 rotate_right(u8& value, u8 shift)
