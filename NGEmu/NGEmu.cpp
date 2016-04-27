@@ -98,8 +98,8 @@ void Emulator::run()
 
 	while (running)
 	{
-		debugger->window->process_events();
 		debugger->render();
+		debugger->window->process_events();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 60));
 	}

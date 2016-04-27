@@ -56,7 +56,6 @@ s64 Debugger::window_callback(HWND& handle, u32& msg, u64& param1, s64& param2)
 	case WM_DESTROY:
 		emulator.running = false;
 		opened = false;
-		ImGui::Shutdown();
 		break;
 	}
 
@@ -544,12 +543,6 @@ void Debugger::display_debugger()
 
 void Debugger::render()
 {
-	// Sometimes when the main loop is being killed, this still gets called, so we need to exit if the loop was killed
-	if (!opened)
-	{
-		return;
-	}
-
 	renderer->new_frame();
 	display_debugger();
 	ImGui::Render();

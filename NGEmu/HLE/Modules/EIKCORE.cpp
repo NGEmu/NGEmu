@@ -8,7 +8,6 @@ using namespace EIKCORE;
 // CEikApplication
 CEikApplication::CEikApplication()
 {
-	log(DEBUG, "CEikApplication()!");
 }
 
 // Wrapper functions

@@ -1,14 +1,10 @@
 #pragma once
 
-#include "EUSER.h"
+#include "APPARC.h"
 
 namespace EIKCORE
 {
-	class CApaApplication : public EUSER::CBase
-	{
-	};
-
-	class CEikApplication : public CApaApplication
+	class CEikApplication : public APPARC::CApaApplication
 	{
 	protected:
 		CEikApplication();

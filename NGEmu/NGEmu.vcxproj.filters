@@ -60,6 +60,9 @@
     <ClCompile Include="HLE\Modules\EIKCORE.cpp">
       <Filter>Emulator\HLE\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="HLE\Modules\APPARC.cpp">
+      <Filter>Emulator\HLE\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -99,6 +102,9 @@
       <Filter>Emulator\HLE\Modules</Filter>
     </ClInclude>
     <ClInclude Include="HLE\Modules\EIKCORE.h">
+      <Filter>Emulator\HLE\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="HLE\Modules\APPARC.h">
       <Filter>Emulator\HLE\Modules</Filter>
     </ClInclude>
   </ItemGroup>

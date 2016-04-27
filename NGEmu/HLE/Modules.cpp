@@ -5,12 +5,14 @@
 extern HLE::Module mEUSER;
 extern HLE::Module mEIKCORE;
 extern HLE::Module mBAFL;
+extern HLE::Module mAPPARC;
 
 std::vector<ModuleInfo> module_list =
 {
 	{ 0x0, "EUSER", &mEUSER },
 	{ 0x1, "EIKCORE", &mEIKCORE },
 	{ 0x2, "BAFL", &mBAFL },
+	{ 0x3, "APPARC", &mAPPARC },
 };
 
 void HLE::initialize()
