@@ -1,10 +1,14 @@
 # NGEmu
 NGEmu is a HLE N-Gage emulator written in C++.
 
-IRC channel: #NGEmu on Freenode
+IRC channel: #ngemu on freenode
 
 ## Status
-Some basic game code runs, a couple HLE functions implemented.
+Developing the emulator is suspended, while we research the system and gather information required to create one.
+
+If you've got any hints, resources or information regarding the N-Gage, Symbian or projects related to it, which we don't already have (check [the wiki](https://github.com/NGEmu/NGEmu/wiki)), then please contact us either through IRC by joining #ngemu on freenode and pinging maadal or tambre, or by sending an email to ![picture of e-mail address](https://i.imgur.com/kYKjQnQ.png).
+
+That said, the NGEmu emulator has some basic CPU emulation and some basic system functions HLE'd.
 
 ## System Requirements
 * Modern 64-bit CPU
@@ -13,7 +17,3 @@ Some basic game code runs, a couple HLE functions implemented.
 
 ## Compiling
 NGEmu can be currently only compiled using Visual Studio 2015 on a Windows computer. Linux support is planned for the future.
-
-## SDK
-If you've got a N-Gage SDK, parts of it or any leads for obtaining it, please contact us either on our IRC channel (#NGEmu on Freenode) or through ![](https://i.imgur.com/bPYEQsM.png)  
-Since a NGEmu is a HLE emulator, we depend on knowing what the actual methods that games use do. This is not really possible to know in any way without the SDK.
